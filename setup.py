@@ -4,7 +4,7 @@ import re
 from setuptools import setup
 
 # parse version from init.py
-with open("src/__init__.py") as init:
+with open("kmunity/__init__.py") as init:
     CUR_VERSION = re.search(
         r"^__version__ = ['\"]([^'\"]*)['\"]",
         init.read(),
@@ -14,7 +14,7 @@ with open("src/__init__.py") as init:
 # setup installation
 setup(
     name="kmunity",
-    packages=["src"],
+    packages=["kmunity"],
     version=CUR_VERSION,
     author="Deren Eaton",
     author_email="de2356@columbia.edu",
