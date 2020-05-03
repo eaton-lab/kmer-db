@@ -12,12 +12,27 @@ import pandas as pd
 
 
 MAMMALS_TERM = """
-(((((((Mammalia[Organism]) AND "public"[Access]) AND "illumina"[Platform]) AND "wgs"[Strategy]) AND "genomic"[Source]) AND "filetype fastq"[Filter]) AND "sra nuccore wgs"[Filter]) AND "strategy whole genome sequencing"[Filter] 
-"""
+(((((((Mammalia[Organism])
+AND "public"[Access]) 
+AND "illumina"[Platform]) 
+AND "wgs"[Strategy]) 
+AND "genomic"[Source]) 
+AND "filetype fastq"[Filter]) 
+AND "sra nuccore wgs"[Filter]) 
+AND "strategy whole genome sequencing"[Filter] 
+""".replace("\n", "")
+
 
 BIRDS_TERM = """
-(((((((Aves[Organism]) AND "public"[Access]) AND "illumina"[Platform]) AND "wgs"[Strategy]) AND "genomic"[Source]) AND "filetype fastq"[Filter]) AND "sra nuccore wgs"[Filter]) AND "strategy whole genome sequencing"[Filter] 
-"""
+(((((((Aves[Organism])
+AND "public"[Access]) 
+AND "illumina"[Platform]) 
+AND "wgs"[Strategy]) 
+AND "genomic"[Source]) 
+AND "filetype fastq"[Filter]) 
+AND "sra nuccore wgs"[Filter]) 
+AND "strategy whole genome sequencing"[Filter] 
+""".replace("\n", "")
 
 
 # exclude Homo sapiens, Mus musculus, Bos_x_
