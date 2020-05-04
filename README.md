@@ -10,10 +10,10 @@ A community sourced database of genome characteristics (genome size and heterozy
 
 ### Repository structure
 ```bash
-├── src
-│   ├── kmerhet
+├── kmunity
+│   ├── kmunity
 │       ├── __init__.py
-│       └── KmerHet.py
+│       └── Kmunity.py
 ├── mammals
 │   ├── database.csv
 |   └── logfiles
