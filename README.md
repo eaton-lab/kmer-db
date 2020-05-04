@@ -11,7 +11,7 @@ A community sourced database of genome characteristics (genome size and heterozy
 ### Repository structure
 ```bash
 ├── kmunity
-│   ├── kmunity
+│   └── kmunity
 │       ├── __init__.py
 │       └── Kmunity.py
 ├── mammals
