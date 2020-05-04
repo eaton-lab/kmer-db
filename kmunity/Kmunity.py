@@ -8,7 +8,7 @@ from __future__ import print_function
 
 import os
 import sys
-import tempfile
+import glob
 import subprocess as sps
 
 import requests
@@ -54,6 +54,7 @@ class Kmunity:
         self.repo = os.path.realpath(os.path.expanduser(repo))
         self.csv = os.path.join(self.repo, self.db, "database.csv")
         self.workdir = os.path.realpath(os.path.expanduser(workdir))
+        self.srrdir = os.path.join(self.workdir, self.srr)
         self.logdir = os.path.join(self.repo, self.db, "logfiles") 
         self.logfile = os.path.join(self.logdir, "{}.log".format(self.srr))
         self._logger_set()
@@ -141,7 +142,7 @@ class Kmunity:
         # load existing database
         self.data = pd.read_csv(self.csv)
 
-        logger.debug("PATHS --------------------------")
+        logger.debug("LOCAL PATHS --------------------")
         logger.debug("workdir: {}".format(self.workdir))
         logger.debug("logfile: {}".format(self.logfile))
         logger.debug("database: {}".format(self.csv))
@@ -201,7 +202,9 @@ class Kmunity:
 
 
     def _get_binary(self):
-
+        """
+        Hack to pull in binaries. TODO: replace with conda recipes.
+        """
         # pull gce & kmer executables to workdir
         gce_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/gce"
         kme_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/kmerfreq"
@@ -221,18 +224,18 @@ class Kmunity:
         # print software versions
         logger.warning("VERSIONS ------------------------")
         logger.info("kmunity: {}".format(kmunity.__version__))
-        logger.info("prefetch: {}".format(self.call_prefetch(True)))
-        logger.info("fasterq-dump: {}".format(self.call_fasterq_dump(True)))
-        logger.info("kmerfreq: {}".format(self.call_kmerfreq(True)))
-        logger.info("gce: {}".format(self.call_gce(True)))
+        logger.info("prefetch: {}".format(self._xprefetch(True)))
+        logger.info("fasterq-dump: {}".format(self._xfasterqd(True)))
+        logger.info("kmerfreq: {}".format(self._xkmerfreq(True)))
+        logger.info("gce: {}".format(self._xcall_gce(True)))
         logger.info("")
 
         # remove the log file if failed.
 
 
 
+    def _xprefetch(self, version_only=False):
 
-    def call_prefetch(self, version_only=False):
         if version_only:
             # print the version
             proc = sps.Popen(
@@ -245,20 +248,26 @@ class Kmunity:
                 logger.error("tool not found.")
             return out[0].decode().split()[-1]
 
-        # run prefetch
+        # log the command used to prefetch
         cmd = [
             self.binaries["prefetch"], self.srr, 
             "-O", self.workdir,
         ]
+        logger.info("Executing: {}".format(" ".join(cmd)))
+
+        # call execute        
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
             raise Exception(out[0])
 
+        # show file size result
+        size = os.path.getsize(os.path.join(self.srrdir, self.srr + ".sra"))
+        size = round(size / 1e9, 2)
+        logger.success("Downloaded {} ({} Gb)".format(self.srr + ".sra", size))
 
 
-
-    def call_fasterq_dump(self, version_only=False):
+    def _xfasterqd(self, version_only=False):
 
         if version_only:
             # print the version
@@ -272,23 +281,38 @@ class Kmunity:
 
         # call the tool
         cmd = [
-            self.kwargs["fasterq-dump"], self.srr, 
-            "-O", self.workdir,
+            self.binaries["fasterq-dump"], self.srr, 
+            "-O", self.srrdir,
         ]
+        logger.info("Executing: {}".format(" ".join(cmd)))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
             raise Exception(out[0])
 
         # write a tmp SRR.lib file
-        libfile = os.path.join(self.workdir, "{}_files.lib".format(self.srr))
+        libfile = os.path.join(self.srrdir, "{}_files.lib".format(self.srr))
+        fastqs = glob.glob(os.path.join(self.srrdir, "*.fastq"))
         with open(libfile, 'w') as out:
-            out.write("...")
+            out.write("\n".join(fastqs))
+
+        # show file size result
+        f1 = self.srr + "_1.fastq"
+        fastq1 = os.path.join(self.srrdir, f1)
+        size1 = os.path.getsize(fastq1)
+        size1 = round(size1 / 1e9, 2)
+
+        f2 = self.srr + "_2.fastq"
+        fastq2 = os.path.join(self.srrdir, f2)
+        size2 = os.path.getsize(fastq2)
+        size2 = round(size2 / 1e9, 2)
+
+        logger.success("Fastq dumped {} ({} Gb)".format(f1, size1))
+        logger.success("Fastq dumped {} ({} Gb)".format(f2, size2))
 
 
 
-
-    def call_kmerfreq(self, version_only=False):
+    def _xkmerfreq(self, version_only=False):
 
         if version_only:
             proc = sps.Popen(
@@ -308,18 +332,25 @@ class Kmunity:
             self.binaries["kmerfreq"],
             "-k", "17",
             "-t", "4",
-            "-p", self.srr,
+            "-p", os.path.join(self.srrdir, self.srr),
             lib,
         ]
+        logger.info("Executing: {}".format(" ".join(cmd)))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
-            raise Exception(out[0])
+            raise Exception(out[0].decode())
+
+        # log head results file
+        resfile = self.srr + ".kmer.freq.stat"
+        logger.success("Kmer counts complete: {}".format(resfile))
+        with open(os.path.join(self.srrdir, resfile), 'r') as indata:
+            head = indata.readlines()[:17]
+            logger.info("\n" + "\n".join(head))
 
 
 
-
-    def call_gce(self, version_only=False):
+    def _xcall_gce(self, version_only=False):
 
         if version_only:
             # print the version
@@ -333,7 +364,10 @@ class Kmunity:
             vers = out.split()[-1]
             return vers
 
-
+        cmd = [
+            self.binaries["gce"],
+        ]
+        logger.info(" ".join(cmd))
 
 
     def parse_results(self):
@@ -342,11 +376,18 @@ class Kmunity:
 
 
     def run(self):
-        self.call_prefetch()
-        self.call_fasterq_dump()
-        self.call_kmerfreq()
-        self.call_gce()
-        self.parse_results()
+
+        logger.warning("RUNNING -------------------------")
+        try:
+            self._xprefetch()
+            self._xfasterqd()
+            self._xkmerfreq()
+            self._xcall_gce()
+            # self.parse_results()
+
+        finally:
+            logger.info("removing tmp workdir")
+            self._clean_ups()
 
 
 
@@ -356,5 +397,5 @@ if __name__ == "__main__":
 
     # SRS3758609    Ursus americanus    9643    11  SRR7811753
     SRR = "SRR7811753"
-    tool = Kmunity(SRR, outdir="/home/deren/Downloads/SRRHET")
+    tool = Kmunity(SRR, workdir="/home/deren/Downloads/SRRHET")
     tool.run()
