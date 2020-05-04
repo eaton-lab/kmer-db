@@ -21,7 +21,10 @@ setup(
     install_requires=[
         "pandas",
         "requests",
+        "loguru",
     ],
+    entry_points={
+        'console_scripts': ['kmunity = kmunity.__main__:main']},
     license='GPL',
     classifiers=[
         'Programming Language :: Python',
