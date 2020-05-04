@@ -112,7 +112,7 @@ class Kmunity:
 
             else:
                 # if logfile is unfinished (not completed run) then remove file
-                logger.debug("LOCAL SETUP --------------------")
+                logger.debug("LOCAL SETUP ----------------------------")
                 logger.debug(
                     'Previous local run {} unfinished. Clearing logfile.'
                     .format(self.srr))
@@ -141,7 +141,6 @@ class Kmunity:
 
         # load existing database
         self.data = pd.read_csv(self.csv)
-
         logger.debug("LOCAL PATHS ----------------------------")
         logger.debug("workdir: {}".format(self.workdir))
         logger.debug("logfile: {}".format(self.logfile))
@@ -194,7 +193,7 @@ class Kmunity:
             user = proc.communicate()[0].decode().strip()
         except Exception:
             pass
-        logger.warning("CONTRIBUTOR --------------------")
+        logger.warning("CONTRIBUTOR ----------------------------")
         logger.info("GitHub user: {}".format(user))
         logger.info("")
 
@@ -222,7 +221,7 @@ class Kmunity:
             out = proc.communicate()
 
         # print software versions
-        logger.warning("VERSIONS ------------------------")
+        logger.warning("VERSIONS --------------------------------")
         logger.info("kmunity: {}".format(kmunity.__version__))
         logger.info("prefetch: {}".format(self._x_prefetch(True)))
         logger.info("fasterq-dump: {}".format(self._x_fasterqd(True)))
@@ -254,7 +253,8 @@ class Kmunity:
             "-O", self.workdir,
             "-X", str(int(1e9)),
         ]
-        logger.info("Executing: {}".format(" ".join(cmd)))
+        logger.info("Executing: {prefetch} {srr} -O {workdir} -X 1000000000")
+        logger.debug("Executing: {}".format(" ".join(cmd)))
 
         # call execute        
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
