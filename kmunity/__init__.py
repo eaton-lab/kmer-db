@@ -4,4 +4,4 @@
 __version__ = "0.0.1"
 
 
-from .KmerHet import KmerHet
+from .Kmunity import Kmunity
