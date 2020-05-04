@@ -284,7 +284,9 @@ class Kmunity:
             self.binaries["fasterq-dump"], self.srr, 
             "-O", self.srrdir,
         ]
-        logger.info("Executing: {}".format(" ".join(cmd)))
+        null = ["{fasterq-dump}", self.srr, "-O", "{workdir}/" + self.srr]
+        logger.info("Executing: {}".format(" ".join(null)))
+        logger.debug("Executing: {}".format(" ".join(cmd)))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
@@ -327,7 +329,7 @@ class Kmunity:
 
 
         # call the tool
-        lib = os.path.join(self.workdir, "{}_files.lib".format(self.srr))
+        lib = os.path.join(self.srrdir, "{}_files.lib".format(self.srr))
         cmd = [
             self.binaries["kmerfreq"],
             "-k", "17",
@@ -335,6 +337,12 @@ class Kmunity:
             "-p", os.path.join(self.srrdir, self.srr),
             lib,
         ]
+
+        # do not log local files paths
+        null = (
+            "kmerfreq -k 17 -t 4 -p {srrdir}/{} {srrdir}/{}_files.lib}"
+            .format(self.srr, self.srr))
+        logger.debug("Executing: {}".format(null))
         logger.info("Executing: {}".format(" ".join(cmd)))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
@@ -345,8 +353,7 @@ class Kmunity:
         resfile = self.srr + ".kmer.freq.stat"
         logger.success("Kmer counts complete: {}".format(resfile))
         with open(os.path.join(self.srrdir, resfile), 'r') as indata:
-            head = indata.readlines()[:17]
-            logger.info("\n" + "\n".join(head))
+            logger.info("FILE CONTENTS:\n" + "".join(indata.read()))
 
 
 
