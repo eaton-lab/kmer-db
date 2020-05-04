@@ -34,10 +34,10 @@ A community sourced database of genome characteristics (genome size and heterozy
 
 ### database files
 
-| Organism  | Taxid  |  Biosample  |   Run   |  Bases_Gb  |   Genome_Size   |  Heterozygosity  |
-|   ---     |   ---  |     ---     |   ---   |    ---     |          ---             |          ---              | 
-|   Trachypithecus laotum         |   465718 |   SRS5312446    |  SRR10028098   |  116   |   ...    |   ...   |
-|   Trachypithecus poliocephalus  |   34886  |   SRS3420064    |  SRR7345456    |  121   |   ...    |   ...   |
+| Organism  | Taxid  |  Biosample  |   Run   |  Bases_Gb  |  Coverage |  Genome_Size   |  Heterozygosity  |
+|   ---     |   ---  |     ---     |   ---   |    ---     |          ---             |          ---     |   ---         | 
+|   Trachypithecus laotum         |   465718 |   SRS5312446    |  SRR10028098   |  116   |   ...    |   ...   |   ... |
+|   Trachypithecus poliocephalus  |   34886  |   SRS3420064    |  SRR7345456    |  121   |   ...    |   ...   |  ... |
 
 
 ### Contributing to database
