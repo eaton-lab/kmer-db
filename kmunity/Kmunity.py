@@ -340,8 +340,8 @@ class Kmunity:
 
         # do not log local files paths
         null = "{kmerfreq} -k 17 -t 4 -p {srrdir}/{srr} {srrdir}/{srr}_files.lib"
-        logger.debug("Executing: {}".format(null))
-        logger.info("Executing: {}".format(" ".join(cmd)))
+        logger.info("Executing: {}".format(null))
+        logger.debug("Executing: {}".format(" ".join(cmd)))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
@@ -350,8 +350,9 @@ class Kmunity:
         # log head results file
         resfile = self.srr + ".kmer.freq.stat"
         logger.success("Kmer counts complete: {}".format(resfile))
-        with open(os.path.join(self.srrdir, resfile), 'r') as indata:
-            logger.info("FILE CONTENTS:\n" + "".join(indata.read()))
+
+        # with open(os.path.join(self.srrdir, resfile), 'r') as indata:
+            # logger.info("FILE CONTENTS:\n" + "".join(indata.read()))
 
 
 
@@ -369,10 +370,70 @@ class Kmunity:
             vers = out.split()[-1]
             return vers
 
+        # prerun commands including (sic) 
+        resfile = os.path.join(self.srrdir, self.srr + ".kmer.freq.stat")
+        cmd1 = ['cat', resfile]
+        cmd2 = ['grep', '#Kmer indivdual number']
+        null = 'cat {srrdir}/{srr}.kmer.freq.stat | grep #Kmer indiv'
+        logger.info("Executing {}:".format(null))
+        logger.debug("Executing: {}".format(" ".join(cmd1)))
+        proc1 = sps.Popen(cmd1, stderr=sps.STDOUT, stdout=sps.PIPE)
+        proc2 = sps.Popen(cmd2, stdin=proc1.stdout, stdout=sps.PIPE)
+        out = proc2.communicate()
+        if proc2.returncode:
+            logger.error(out[0].decode())
+        ikmer = out[0].decode().strip().split()[-1]
+        logger.success("Kmer individual number: {}".format(ikmer))
+
+        res2col = resfile + ".2colum"
+        logger.info("Parsing 2-columns file to: {}".format(res2col))
+        arr = pd.read_csv(resfile, skiprows=7, sep="\t", header=None)
+        arr = arr.iloc[:, :2]
+        arr.to_csv(res2col, index=False, sep="\t", header=None)
+
+        # Run in homozygous mode
+        logger.info("Running 'gce' in homozygous mode to estimate coverage")
+        null = "{gce} -g " + ikmer + " -f {res.2col}"
+        logger.info("Executing: {}".format(null))
         cmd = [
             self.binaries["gce"],
+            "-g", ikmer,
+            "-f", res2col,
         ]
-        logger.info(" ".join(cmd))
+        logger.debug(" ".join(cmd))
+        proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
+        self.gce1out = proc.communicate()
+        if proc.returncode:
+            logger.error(self.gce1out[0].decode())
+
+        # write to a tmp file
+        coverage = self.gce1out[0].decode().split("Final estimation table:")
+        coverage = coverage[-1].strip().split("\n")
+        logger.success("GCE H0 coverage depth: {}".format(coverage))
+
+        # Run in heterozygous mode
+        logger.info("Running 'gce' in heterozygous mode.")
+        null = "{gce} -g " + ikmer + " -f {res.2col}"
+        logger.info("Executing: {}".format(null))
+        cmd = [
+            self.binaries["gce"],
+            "-g", ikmer,
+            "-f", res2col,
+        ]
+        logger.debug(" ".join(cmd))
+        proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
+        self.gce1out = proc.communicate()
+        if proc.returncode:
+            logger.error(self.gce1out[0].decode())
+
+        # write to a tmp file
+        coverage = self.gce1out[0].decode().split("Final estimation table:")
+        coverage = coverage[-1].strip().split("\n")
+        logger.success("GCE genome size: {}".format(coverage))
+        logger.success("GCE heterozygosity: {}".format(coverage))
+        logger.success("GCE coverage depth: {}".format(coverage))
+
+
 
 
     def parse_results(self):
