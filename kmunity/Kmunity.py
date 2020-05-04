@@ -131,7 +131,7 @@ class Kmunity:
             "'repo' path not found: {}".format(self.repo))
         assert os.path.exists(self.csv), (
             "'repo' path does not point to local kmunity repo: {}"
-            .format(self.repo))
+            .format(self.csv))
 
         # ensure workdir and logdir exist
         if not os.path.exists(self.workdir):
@@ -142,7 +142,7 @@ class Kmunity:
         # load existing database
         self.data = pd.read_csv(self.csv)
 
-        logger.debug("LOCAL PATHS --------------------")
+        logger.debug("LOCAL PATHS ----------------------------")
         logger.debug("workdir: {}".format(self.workdir))
         logger.debug("logfile: {}".format(self.logfile))
         logger.debug("database: {}".format(self.csv))
@@ -170,7 +170,7 @@ class Kmunity:
         # user SRR supplied
         else:
             # print a log header with info
-            logger.warning("QUERY --------------------------")
+            logger.warning("QUERY ----------------------------------")
             self.query = Search_SRR(self.srr)
             self.query.run()
             logger.info("database: {}".format(self.db))
@@ -224,17 +224,17 @@ class Kmunity:
         # print software versions
         logger.warning("VERSIONS ------------------------")
         logger.info("kmunity: {}".format(kmunity.__version__))
-        logger.info("prefetch: {}".format(self._xprefetch(True)))
-        logger.info("fasterq-dump: {}".format(self._xfasterqd(True)))
-        logger.info("kmerfreq: {}".format(self._xkmerfreq(True)))
-        logger.info("gce: {}".format(self._xcall_gce(True)))
+        logger.info("prefetch: {}".format(self._x_prefetch(True)))
+        logger.info("fasterq-dump: {}".format(self._x_fasterqd(True)))
+        logger.info("kmerfreq: {}".format(self._x_kmerfreq(True)))
+        logger.info("gce: {}".format(self._x_call_gce(True)))
         logger.info("")
 
         # remove the log file if failed.
 
 
 
-    def _xprefetch(self, version_only=False):
+    def _x_prefetch(self, version_only=False):
 
         if version_only:
             # print the version
@@ -252,6 +252,7 @@ class Kmunity:
         cmd = [
             self.binaries["prefetch"], self.srr, 
             "-O", self.workdir,
+            "-X", str(int(1e9)),
         ]
         logger.info("Executing: {}".format(" ".join(cmd)))
 
@@ -262,12 +263,16 @@ class Kmunity:
             raise Exception(out[0])
 
         # show file size result
-        size = os.path.getsize(os.path.join(self.srrdir, self.srr + ".sra"))
+        srafile = os.path.join(self.srrdir, self.srr + ".sra")
+        if not os.path.exists(srafile):
+            logger.error("Prefetch failed, no sra file found.")
+            raise IOError("Prefetch failed, no sra file found.")
+        size = os.path.getsize(srafile)
         size = round(size / 1e9, 2)
         logger.success("Downloaded {} ({} Gb)".format(self.srr + ".sra", size))
 
 
-    def _xfasterqd(self, version_only=False):
+    def _x_fasterqd(self, version_only=False):
 
         if version_only:
             # print the version
@@ -290,7 +295,7 @@ class Kmunity:
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
-            raise Exception(out[0])
+            raise TypeError(out[0].decode())
 
         # write a tmp SRR.lib file
         libfile = os.path.join(self.srrdir, "{}_files.lib".format(self.srr))
@@ -314,7 +319,7 @@ class Kmunity:
 
 
 
-    def _xkmerfreq(self, version_only=False):
+    def _x_kmerfreq(self, version_only=False):
 
         if version_only:
             proc = sps.Popen(
@@ -356,7 +361,35 @@ class Kmunity:
 
 
 
-    def _xcall_gce(self, version_only=False):
+    # def _xcutadapt(self, version_only=False):
+
+    #     if version_only:
+    #         # print the version
+    #         proc = sps.Popen(
+    #             [self.binaries["cutadapt"], "-v"],
+    #             stderr=sps.STDOUT, 
+    #             stdout=sps.PIPE,
+    #         )
+    #         out = proc.communicate()[0].decode().split("\n")
+    #         out = [i for i in out if "Version" in i][0]
+    #         vers = out.split()[-1]
+    #         return vers
+
+    #     # build new command
+    #     cmd = [
+    #         self.binaries["cutadapt"], 
+    #         "-j", "4",
+    #         "-o", self.fastq1, 
+    #         "-p", self.fastq2,
+    #         self.clean1, 
+    #         self.clean2,
+    #     ]
+
+
+
+
+
+    def _x_call_gce(self, version_only=False):
 
         if version_only:
             # print the version
@@ -370,11 +403,11 @@ class Kmunity:
             vers = out.split()[-1]
             return vers
 
-        # prerun commands including (sic) 
+        # prerun commands 
         resfile = os.path.join(self.srrdir, self.srr + ".kmer.freq.stat")
         cmd1 = ['cat', resfile]
-        cmd2 = ['grep', '#Kmer indivdual number']
-        null = 'cat {srrdir}/{srr}.kmer.freq.stat | grep #Kmer indiv'
+        cmd2 = ['grep', '#Kmer indivdual number']  # (sic)
+        null = "cat {srrdir}/{srr}.kmer.freq.stat | grep '#Kmer indiv'"
         logger.info("Executing {}:".format(null))
         logger.debug("Executing: {}".format(" ".join(cmd1)))
         proc1 = sps.Popen(cmd1, stderr=sps.STDOUT, stdout=sps.PIPE)
@@ -382,9 +415,12 @@ class Kmunity:
         out = proc2.communicate()
         if proc2.returncode:
             logger.error(out[0].decode())
+
+        # store ikmer result
         ikmer = out[0].decode().strip().split()[-1]
         logger.success("Kmer individual number: {}".format(ikmer))
 
+        # write kmer 2 column sub result file
         res2col = resfile + ".2colum"
         logger.info("Parsing 2-columns file to: {}".format(res2col))
         arr = pd.read_csv(resfile, skiprows=7, sep="\t", header=None)
@@ -407,28 +443,36 @@ class Kmunity:
             logger.error(self.gce1out[0].decode())
 
         # write to a tmp file
-        coverage = self.gce1out[0].decode().split("Final estimation table:")
-        coverage = coverage[-1].strip().split("\n")
-        logger.success("GCE H0 coverage depth: {}".format(coverage))
+        parse = self.gce1out[0].decode().split("Final estimation table:")
+        parse = parse[-1].strip().split("\n")
+        headers, data = parse[:2]
+        headers = headers.strip().split("\t")
+        data = data.strip().split("\t")
+        self.h0dict = {}
+        for i, j in zip(headers, data):
+            self.h0dict[i] = j
+            logger.success("GCE H0 {}: {}".format(j))
 
         # Run in heterozygous mode
         logger.info("Running 'gce' in heterozygous mode.")
-        null = "{gce} -g " + ikmer + " -f {res.2col}"
+        null = "{gce} -g " + ikmer + " -f {res.2col} -H 1 -c {coverage}"
         logger.info("Executing: {}".format(null))
         cmd = [
             self.binaries["gce"],
             "-g", ikmer,
             "-f", res2col,
+            "-H", "1", 
+            "-c", str(int(float(round(self.h0dict["coverage_depth"]))))
         ]
         logger.debug(" ".join(cmd))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
-        self.gce1out = proc.communicate()
+        self.gce2out = proc.communicate()
         if proc.returncode:
-            logger.error(self.gce1out[0].decode())
+            logger.error(self.gce2out[0].decode())
 
         # write to a tmp file
-        coverage = self.gce1out[0].decode().split("Final estimation table:")
-        coverage = coverage[-1].strip().split("\n")
+        parse = self.gce2out[0].decode().split("Final estimation table:")
+        parse = coverage[-1].strip().split("\n")
         logger.success("GCE genome size: {}".format(coverage))
         logger.success("GCE heterozygosity: {}".format(coverage))
         logger.success("GCE coverage depth: {}".format(coverage))
@@ -440,20 +484,18 @@ class Kmunity:
         pass
 
 
-
-    def run(self):
-
-        logger.warning("RUNNING -------------------------")
+    def binary_wrap(self):
+        logger.warning("RUNNING ---------------------------------")
         try:
-            self._xprefetch()
-            self._xfasterqd()
-            self._xkmerfreq()
-            self._xcall_gce()
+            self._x_prefetch()
+            self._x_fasterqd()
+            self._x_kmerfreq()
+            self._x_call_gce()
             # self.parse_results()
 
         finally:
             logger.info("removing tmp workdir")
-            self._clean_ups()
+            self._cleanup_die()
 
 
 
@@ -464,4 +506,4 @@ if __name__ == "__main__":
     # SRS3758609    Ursus americanus    9643    11  SRR7811753
     SRR = "SRR7811753"
     tool = Kmunity(SRR, workdir="/home/deren/Downloads/SRRHET")
-    tool.run()
+    tool.binary_wrap()
