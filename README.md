@@ -49,10 +49,10 @@ git clone https://github.com/{username}/kmunity
 conda install kmunity -c conda-forge
 
 # run tool selecting desired database to contribute to, scratch space, and repo location
-kmunity -db mammals  -o /scratch/tmp  --repo ./kmunity
+kmunity -d mammals  -w /scratch/tmp  -r ./kmunity
 
 # or select a specific run
-kmunity -s SRR10028098 -db mammals -o /scratch/tmp  --repo ./kmunity
+kmunity -s SRR10028098 -d mammals -w /scratch/tmp  -r ./kmunity
 
 # cd into dir, diff to see new results, push, and make pull request to origin on GitHub
 cd kmunity
