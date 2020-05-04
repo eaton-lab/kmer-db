@@ -260,7 +260,8 @@ class Kmunity:
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
-            raise Exception(out[0])
+            logger.error("Error: {}".format(out[0].decode()))
+            raise Exception(out[0].decode())
 
         # show file size result
         srafile = os.path.join(self.srrdir, self.srr + ".sra")
@@ -289,8 +290,8 @@ class Kmunity:
             self.binaries["fasterq-dump"], self.srr, 
             "-O", self.srrdir,
         ]
-        null = ["{fasterq-dump}", self.srr, "-O", "{workdir}/" + self.srr]
-        logger.info("Executing: {}".format(" ".join(null)))
+        null = "{fasterq-dump} {srr} -O {workdir}/{srr}"
+        logger.info("Executing: {}".format(null))
         logger.debug("Executing: {}".format(" ".join(cmd)))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
@@ -484,6 +485,11 @@ class Kmunity:
         pass
 
 
+    def _clean_workd(self):
+        logger.info("Removing temp files in {workdir}")
+        logger.debug("Removing: {}".format(self.srrdir))
+
+
     def binary_wrap(self):
         logger.warning("RUNNING ---------------------------------")
         try:
@@ -495,8 +501,7 @@ class Kmunity:
 
         finally:
             logger.info("removing tmp workdir")
-            self._cleanup_die()
-
+            self._clean_workd()
 
 
 
