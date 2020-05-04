@@ -339,9 +339,7 @@ class Kmunity:
         ]
 
         # do not log local files paths
-        null = (
-            "kmerfreq -k 17 -t 4 -p {srrdir}/{} {srrdir}/{}_files.lib}"
-            .format(self.srr, self.srr))
+        null = "{kmerfreq} -k 17 -t 4 -p {srrdir}/{srr} {srrdir}/{srr}_files.lib"
         logger.debug("Executing: {}".format(null))
         logger.info("Executing: {}".format(" ".join(cmd)))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
