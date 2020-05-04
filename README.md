@@ -24,17 +24,17 @@ A community sourced database of genome characteristics (genome size and heterozy
 |   └── logfiles
 |       ├── SRRXXXYYY.log
 |       └── ...
-├── plants
-│   ├── database.csv
-|   └── logfiles
-|       ├── SRRXXXYYY.log
-|       └── ...
+└── plants
+    ├── database.csv
+    └── logfiles
+        ├── SRRXXXYYY.log
+        └── ...
 ```
 
 
 ### database files
 
-| Organism  | Taxid  |  Biosample  |   Run   |  Bases_Gb  |   Estimate_Genome_Size   |  Estimate_Heterozygosity  |
+| Organism  | Taxid  |  Biosample  |   Run   |  Bases_Gb  |   Genome_Size   |  Heterozygosity  |
 |   ---     |   ---  |     ---     |   ---   |    ---     |          ---             |          ---              | 
 |   Trachypithecus laotum         |   465718 |   SRS5312446    |  SRR10028098   |  116   |   ...    |   ...   |
 |   Trachypithecus poliocephalus  |   34886  |   SRS3420064    |  SRR7345456    |  121   |   ...    |   ...   |
@@ -48,11 +48,13 @@ git clone https://github.com/{username}/kmunity
 # install kmunity
 conda install kmunity -c conda-forge
 
-# run tool selecting desired database to contribute to, scratch space, and repo location for results.
-# multiple jobs can be distributed on HPC at same time if you have sufficient scratch space.
+# run tool selecting desired database to contribute to, scratch space, and repo location
 kmunity -db mammals  -o /scratch/tmp  --repo ./kmunity
 
-# cd into dir, check new results, push, and make pull request to origin on GitHub
+# or select a specific run
+kmunity -s SRR10028098 -db mammals -o /scratch/tmp  --repo ./kmunity
+
+# cd into dir, diff to see new results, push, and make pull request to origin on GitHub
 cd kmunity
 git diff 
 git push
