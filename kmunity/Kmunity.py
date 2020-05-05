@@ -9,6 +9,7 @@ from __future__ import print_function
 import os
 import sys
 import glob
+import tempfile
 import subprocess as sps
 
 import requests
@@ -207,7 +208,7 @@ class Kmunity:
 
     def _get_binary(self):
         """
-        Hack to pull in binaries. TODO: replace with conda recipes.
+        Always pulls in fixed versions of gce and kmerfreq to srrdir.
         """
         # pull gce & kmer executables to workdir
         gce_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/gce"
@@ -215,7 +216,7 @@ class Kmunity:
         for url in [gce_url, kme_url]:
             res = requests.get(url, allow_redirects=True)
             exe = os.path.basename(url)
-            outbin = os.path.join(self.workdir, exe)
+            outbin = os.path.join(self.srrdir, exe)
             with open(outbin, 'wb') as out:
                 out.write(res.content)
             self.binaries[exe] = outbin
@@ -225,11 +226,28 @@ class Kmunity:
             proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
             out = proc.communicate()
 
+        # # pull in version 2.10.5 of sra-tools
+        # url = "https://github.com/ncbi/sra-tools/archive/2.10.5.tar.gz"
+        # res = requests.get(url, allow_redirects=True)
+        # tmptar = os.path.join(tempfile.gettempdir(), "sra-tools-2.10.5.tar.gz")
+        # with open(tmptar, 'wb') as tz:
+        #     tz.write(res.content)
+
+        # # decompress tar file 
+        # cmd = ["tar", "zxvf", tmptar, "-C", tempfile.gettempdir()]
+        # proc = sps.Popen(cmd, stderr=sps.PIPE, stdout=sps.PIPE)
+        # comm = proc.communicate()
+        # if proc.returncode:
+        #     print(comm[0].decode())
+        # tmpbin = os.path.join(tempfile.gettempdir(), "sra-tools-2.10.5/")
+        # self.binaries["vdb-config"] = 
+        # self.binaries["prefetch"] = 
+        # self.binaries["fasterq-dump"] = 
+
         # print software versions
         logger.warning("VERSIONS --------------------------------")
         logger.info("kmunity: {}".format(kmunity.__version__))
-        logger.info("prefetch: {}".format(self._x_prefetch(True)))
-        logger.info("fasterq-dump: {}".format(self._x_fasterqd(True)))
+        logger.info("sra-tools: {}".format(self._x_prefetch(True)))
         logger.info("kmerfreq: {}".format(self._x_kmerfreq(True)))
         logger.info("gce: {}".format(self._x_call_gce(True)))
         logger.info("")
@@ -294,8 +312,9 @@ class Kmunity:
         cmd = [
             self.binaries["fasterq-dump"], self.srr, 
             "-O", self.srrdir,
+            "-t", self.srrdir,
         ]
-        null = "{fasterq-dump} {srr} -O {workdir}/{srr}"
+        null = "{fasterq-dump} {srr} -O {workdir}/{srr} -t {workdir}/{srr}"
         logger.info("Executing: {}".format(null))
         logger.debug("Executing: {}".format(" ".join(cmd)))
 
@@ -303,6 +322,15 @@ class Kmunity:
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
+            logger.error("Failed: {}".format(out[0].decode()))
+            logger.error(
+                "If you encountered a disk full error but believe you have "
+                "sufficient space available in your working dir then the "
+                "is being caused by the insane behavior of the sra-tools "
+                "package which hides large tmp file in obscure places. "
+                "You can turn off this behavior by running vdb-config -i and "
+                "turning off the 'enable local file caching' option."
+                )
             raise TypeError(out[0].decode())
 
         # write a tmp SRR.lib file
@@ -492,14 +520,47 @@ class Kmunity:
         pass
 
 
-    def _clean_workd(self):
+    def _clean_work(self):
         logger.info("Removing temp files in {workdir}")
         logger.debug("Removing: {}".format(self.srrdir))
+
+
+    def _set_vdbcfg(self, reset=False):
+
+        # reset to initial value
+        if reset:
+            cmd0 = [
+                "vdb-config", "--set", "cache-disabled:{}"
+                .format(self.init_cache)]
+            out = sps.Popen(cmd0).communicate()
+            logger.debug(
+                "vdb-config 'cache-disabled' returned to initial value 'true'")
+
+        # get and store the initial cache setting
+        cmd0 = ["vdb-config" "-a"]
+        cmd1 = ["grep", "cache"]
+        proc0 = sps.Popen(cmd0, stderr=sps.STDOUT, stdout=sps.PIPE)
+        proc1 = sps.Popen(cmd1, stdin=proc0.stdout, stdout=sps.PIPE)
+        out = proc1.communicate()
+        if proc1.returncode:
+            logger.error("Failed: {}".format(out[0].decode()))
+            raise OSError("Failed: {}".format(out[0].decode()))
+        self.init_cache = out[0].decode().split(">")[-1].split("<")[0]
+
+        # set new cache value to "true"
+        if self.init_cache != "true":
+            cmd0 = ["vdb-config", "--set", "cache-disabled:true"]
+            out = sps.Popen(cmd0).communicate()
+            logger.debug("vdb-config 'cache-disabled' set to 'true'")
+
+
+
 
 
     def binary_wrap(self):
         logger.warning("RUNNING ---------------------------------")
         try:
+            self._set_vdbcfg()
             self._x_prefetch()
             self._x_fasterqd()
             self._x_kmerfreq()
@@ -508,7 +569,8 @@ class Kmunity:
 
         finally:
             logger.info("removing tmp workdir")
-            self._clean_workd()
+            self._set_vdbcfg(reset=True)
+            self._clean_work()
 
 
 
