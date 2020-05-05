@@ -43,7 +43,7 @@ class CLI:
 
         # configure kmunity and sratools
         if self.args.config:
-            self._config()
+            self.config()
         # finally run the requested functions
         else:
             self.run()
