@@ -45,7 +45,7 @@ class Kmunity:
         The kmunity git repository where current results are stored and where
         new results will be organized. Default is "./kmunity".
     """
-    def __init__(self, srr=None, db="mammals", workdir="/tmp", repo="./kmunity"):
+    def __init__(self, srr=None, db="mammals", workdir="/tmp", repo="./kmunity", **kwargs):
 
         # store args
         self.srr = srr
@@ -66,6 +66,11 @@ class Kmunity:
             "kmerfreq": os.path.join(sys.prefix, "bin", "kmerfreq"),
             "gce": os.path.join(sys.prefix, "bin", "gce"),
         }
+        # allow kwargs to overwrite binary paths
+        for key in kwargs:
+            if key in self.binaries:
+                self.binaries[kwargs[key]] 
+
 
         # run checks on existing results, paths and binaries.
         self._path_check()
