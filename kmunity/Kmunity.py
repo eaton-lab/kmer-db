@@ -537,7 +537,7 @@ class Kmunity:
                 .format(self.init_cache))
 
         # get and store the initial cache setting
-        cmd0 = [self.binaries["vdb-config"] "-a"]
+        cmd0 = [self.binaries["vdb-config"], "-a"]
         cmd1 = ["grep", "cache"]
         proc0 = sps.Popen(cmd0, stderr=sps.STDOUT, stdout=sps.PIPE)
         proc1 = sps.Popen(cmd1, stdin=proc0.stdout, stdout=sps.PIPE)
