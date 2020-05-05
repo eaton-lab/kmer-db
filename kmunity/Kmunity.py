@@ -9,6 +9,7 @@ from __future__ import print_function
 import os
 import sys
 import glob
+import tempfile
 import subprocess as sps
 
 import requests
@@ -48,7 +49,7 @@ class Kmunity:
     def __init__(self, srr=None, db="mammals", workdir="/tmp", repo="./kmunity", **kwargs):
 
         # store args
-        self.srr = srr
+        self.srr = (srr if srr else "SRRXXXYYY")
         self.db = db
         self.data = None
         self.repo = os.path.realpath(os.path.expanduser(repo))
@@ -60,24 +61,23 @@ class Kmunity:
         self._logger_set()
 
         # check kwargs: e.g., user-supplied binary paths
-        self.binaries = {
-            "prefetch": os.path.join(sys.prefix, "bin", "prefetch"),
-            "fasterq-dump": os.path.join(sys.prefix, "bin", "fasterq-dump"),
-            "vdb-config": os.path.join(sys.prefix, "bin", "vdb-config"),
-            "kmerfreq": os.path.join(sys.prefix, "bin", "kmerfreq"),
-            "gce": os.path.join(sys.prefix, "bin", "gce"),
-        }
+        self.binaries = {}
+
         # allow kwargs to overwrite binary paths
         for key in kwargs:
             if key in self.binaries:
                 self.binaries[key] = kwargs[key]
 
-        # run checks on existing results, paths and binaries.
-        self._path_check()
-        self._query_ncbi()
-        self._get_usergh()
-        self._get_binary()
+        # config setup only
+        if kwargs.get("config"):
+            self._get_binary()
 
+        # run checks on existing results, paths and binaries.
+        else:
+            self._get_usergh()
+            self._get_binary()
+            self._path_check()
+            self._query_ncbi()
 
 
 
@@ -117,13 +117,12 @@ class Kmunity:
 
             else:
                 # if logfile is unfinished (not completed run) then remove file
-                logger.debug("LOCAL SETUP ----------------------------")
+                logger.debug("LOG FILE")
                 logger.debug(
-                    'Previous local run {} unfinished. Clearing logfile.'
+                    'Clearing previous unfinished run of {}.'
                     .format(self.srr))
                 open(self.logfile, 'w').close()
                 logger.debug("")
-
 
 
 
@@ -145,7 +144,7 @@ class Kmunity:
 
         # load existing database
         self.data = pd.read_csv(self.csv)
-        logger.debug("LOCAL PATHS ----------------------------")
+        logger.debug("LOCAL PATHS")
         logger.debug("workdir: {}".format(self.workdir))
         logger.debug("srrdir: {}".format(self.srrdir))        
         logger.debug("logfile: {}".format(self.logfile))
@@ -156,7 +155,6 @@ class Kmunity:
         # curdb = pd.read_csv(self.csv)
         # if not os.path.exists(self.kwargs['outdir']):
             # os.makedirs(self.kwargs['outdir'])
-
 
 
 
@@ -174,7 +172,7 @@ class Kmunity:
         # user SRR supplied
         else:
             # print a log header with info
-            logger.warning("QUERY ----------------------------------")
+            logger.warning("NCBI QUERY")
             self.query = Search_SRR(self.srr)
             self.query.run()
             logger.info("database: {}".format(self.db))
@@ -188,7 +186,6 @@ class Kmunity:
 
 
 
-
     def _get_usergh(self):
         # get user
         user = "anonymous"
@@ -198,10 +195,11 @@ class Kmunity:
             user = proc.communicate()[0].decode().strip()
         except Exception:
             pass
-        logger.warning("CONTRIBUTOR ----------------------------")
-        logger.info("GitHub user: {}".format(user))
+        logger.warning("CONTRIBUTOR")
+        logger.info("GitHub user: {}".format((user if user else "unknown")))
+        if not user:
+            logger.debug("tip: run 'git config' to set username.")
         logger.info("")
-
 
 
 
@@ -209,49 +207,79 @@ class Kmunity:
         """
         Always pulls in fixed versions of gce and kmerfreq to srrdir.
         """
-        # pull gce & kmer executables to workdir
-        gce_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/gce"
-        kme_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/kmerfreq"
-        for url in [gce_url, kme_url]:
-            res = requests.get(url, allow_redirects=True)
-            exe = os.path.basename(url)
-            outbin = os.path.join(self.srrdir, exe)
-            with open(outbin, 'wb') as out:
-                out.write(res.content)
-            self.binaries[exe] = outbin
+        bin_gce = os.path.join(tempfile.gettempdir(), "gce")
+        bin_kme = os.path.join(tempfile.gettempdir(), "kmerfreq")
+        bin_pre = os.path.join(
+            tempfile.gettempdir(), 
+            "sratoolkit.2.10.5-ubuntu64/"
+            "bin", "prefetch")
+        bin_fas = os.path.join(
+            tempfile.gettempdir(), 
+            "sratoolkit.2.10.5-ubuntu64/"
+            "bin", "fasterq-dump")
 
-            # ensure it is executable
-            cmd = ['chmod', '+x', outbin]
-            proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
-            out = proc.communicate()
+        if not os.path.exists(bin_gce):
+            logger.debug("local gce not found.")
+            self._download_gcetools_to_tmp()
+            if not os.path.exists(bin_gce):
+                logger.error("gce tools download failed.")
+        self.binaries["gce"] = bin_gce
+        self.binaries["kmerfreq"] = bin_kme
 
-        # # pull in version 2.10.5 of sra-tools
-        # url = "https://github.com/ncbi/sra-tools/archive/2.10.5.tar.gz"
-        # res = requests.get(url, allow_redirects=True)
-        # tmptar = os.path.join(tempfile.gettempdir(), "sra-tools-2.10.5.tar.gz")
-        # with open(tmptar, 'wb') as tz:
-        #     tz.write(res.content)
-
-        # # decompress tar file 
-        # cmd = ["tar", "zxvf", tmptar, "-C", tempfile.gettempdir()]
-        # proc = sps.Popen(cmd, stderr=sps.PIPE, stdout=sps.PIPE)
-        # comm = proc.communicate()
-        # if proc.returncode:
-        #     print(comm[0].decode())
-        # tmpbin = os.path.join(tempfile.gettempdir(), "sra-tools-2.10.5/")
-        # self.binaries["vdb-config"] = 
-        # self.binaries["prefetch"] = 
-        # self.binaries["fasterq-dump"] = 
+        if not os.path.exists(bin_pre):
+            self._download_sratools_to_tmp()
+            if not os.path.exists(bin_pre):
+                logger.error("sratools download failed.")
+        self.binaries["prefetch"] = bin_pre
+        self.binaries["fasterq-dump"] = bin_fas
 
         # print software versions
-        logger.warning("VERSIONS --------------------------------")
+        logger.warning("VERSIONS")
         logger.info("kmunity: {}".format(kmunity.__version__))
         logger.info("sra-tools: {}".format(self._x_prefetch(True)))
         logger.info("kmerfreq: {}".format(self._x_kmerfreq(True)))
         logger.info("gce: {}".format(self._x_call_gce(True)))
         logger.info("")
 
-        # remove the log file if failed.
+
+
+    def _dl_gce_tmp(self):
+        # pull gce & kmer executables to workdir
+        gce_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/gce"
+        kme_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/kmerfreq"
+        for url in [gce_url, kme_url]:
+            res = requests.get(url, allow_redirects=True)
+            exe = os.path.basename(url)
+            outbin = os.path.join(tempfile.gettempdir(), exe)
+            with open(outbin, 'wb') as out:
+                out.write(res.content)
+                self.binaries[exe] = outbin
+
+            # ensure it is executable
+            cmd = ['chmod', '+x', outbin]
+            proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
+            out = proc.communicate()
+
+
+
+    def _dl_sra_tmp(self):
+        logger.debug("Downloading sratoolkit.2.10.5 to /tmp")
+        # pull in version 2.10.5 of sra-tools (ONLY THIS VERSION WORKS)
+        url = "https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.5/sratoolkit.2.10.5-ubuntu64.tar.gz"
+        tmptar = os.path.join(tempfile.gettempdir(), os.path.basename(url))
+        res = requests.get(url, stream=True)
+        res.raise_for_status()
+        with open(tmptar, 'wb') as tz:
+            # for chunk in res.iter_content(chunk_size=8192):
+            tz.write(res.raw.read()) 
+
+        # decompress tar file 
+        logger.debug("Extracting sratoolkit.2.10.5 in /tmp")
+        cmd = ["tar", "xzvf", tmptar, "-C", tempfile.gettempdir()]
+        proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
+        comm = proc.communicate()
+        if proc.returncode:
+            print(comm[0].decode())
 
 
 
@@ -293,6 +321,7 @@ class Kmunity:
         size = os.path.getsize(srafile)
         size = round(size / 1e9, 2)
         logger.success("Downloaded {} ({} Gb)".format(self.srr + ".sra", size))
+
 
 
     def _x_fasterqd(self, version_only=False):
@@ -562,7 +591,7 @@ class Kmunity:
 
 
     def binary_wrap(self):
-        logger.warning("RUNNING ---------------------------------")
+        logger.warning("RUNNING")
         try:
             # self._set_vdbcfg()
             self._x_prefetch()

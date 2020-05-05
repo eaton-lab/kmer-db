@@ -41,11 +41,12 @@ class CLI:
         self._parse_command_line()
         self.args = self.parser.parse_args()
 
-        # bail if no args for 'params' or 'new'
-        # self.check_args()
-
+        # configure kmunity and sratools
+        if self.args.config:
+            self._config()
         # finally run the requested functions
-        self.run()
+        else:
+            self.run()
 
 
     def _parse_command_line(self):
@@ -79,6 +80,11 @@ class CLI:
             default="mammals",
             help="kmunity database to contribute to.")
 
+        self.parser.add_argument(
+            "--config", action='store_true',
+            help="configure kmunity with sra-tools")
+
+
         # self.parser.add_argument(
         #     "-t", dest="tmpdir", type=str, 
         #     default="/tmp/",
@@ -86,6 +92,8 @@ class CLI:
         #     )
 
 
+    def config(self):
+        kmunity.Kmunity(config=True)
 
 
     def run(self):
