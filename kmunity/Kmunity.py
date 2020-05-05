@@ -70,7 +70,7 @@ class Kmunity:
         # allow kwargs to overwrite binary paths
         for key in kwargs:
             if key in self.binaries:
-                self.binaries[kwargs[key]] 
+                self.binaries[key] = kwargs[key]
 
         # run checks on existing results, paths and binaries.
         self._path_check()
