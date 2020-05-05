@@ -63,6 +63,7 @@ class Kmunity:
         self.binaries = {
             "prefetch": os.path.join(sys.prefix, "bin", "prefetch"),
             "fasterq-dump": os.path.join(sys.prefix, "bin", "fasterq-dump"),
+            "vdb-config": os.path.join(sys.prefix, "bin", "vdb-config"),
             "kmerfreq": os.path.join(sys.prefix, "bin", "kmerfreq"),
             "gce": os.path.join(sys.prefix, "bin", "gce"),
         }
@@ -70,7 +71,6 @@ class Kmunity:
         for key in kwargs:
             if key in self.binaries:
                 self.binaries[kwargs[key]] 
-
 
         # run checks on existing results, paths and binaries.
         self._path_check()
@@ -147,7 +147,7 @@ class Kmunity:
         self.data = pd.read_csv(self.csv)
         logger.debug("LOCAL PATHS ----------------------------")
         logger.debug("workdir: {}".format(self.workdir))
-        logger.debug("srrdir: {}".format(self.workdir))        
+        logger.debug("srrdir: {}".format(self.srrdir))        
         logger.debug("logfile: {}".format(self.logfile))
         logger.debug("database: {}".format(self.csv))
         logger.debug("")        
