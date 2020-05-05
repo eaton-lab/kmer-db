@@ -285,7 +285,7 @@ class Kmunity:
             out = proc.communicate()[0].decode().split()[-1]
             return out
 
-        # call the tool
+        # commands to the logger
         cmd = [
             self.binaries["fasterq-dump"], self.srr, 
             "-O", self.srrdir,
@@ -293,6 +293,8 @@ class Kmunity:
         null = "{fasterq-dump} {srr} -O {workdir}/{srr}"
         logger.info("Executing: {}".format(null))
         logger.debug("Executing: {}".format(" ".join(cmd)))
+
+        # call the tool
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         out = proc.communicate()
         if proc.returncode:
