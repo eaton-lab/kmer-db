@@ -524,35 +524,38 @@ class Kmunity:
         logger.debug("Removing: {}".format(self.srrdir))
 
 
-    def _set_vdbcfg(self, reset=False):
 
-        # reset to initial value
-        if reset:
-            cmd0 = [
-                "vdb-config", "--set", "cache-disabled:{}"
-                .format(self.init_cache)]
-            out = sps.Popen(cmd0).communicate()
-            logger.debug(
-                "{vdb-config} --set cache-disabled:{}"
-                .format(self.init_cache))
 
-        # get and store the initial cache setting
-        cmd0 = [self.binaries["vdb-config"], "-a"]
-        cmd1 = ["grep", "cache"]
-        proc0 = sps.Popen(cmd0, stderr=sps.STDOUT, stdout=sps.PIPE)
-        proc1 = sps.Popen(cmd1, stdin=proc0.stdout, stdout=sps.PIPE)
-        out = proc1.communicate()
-        if proc1.returncode:
-            logger.error("Failed: {}".format(out[0].decode()))
-            raise OSError("Failed: {}".format(out[0].decode()))
-        self.init_cache = out[0].decode().split(">")[-1].split("<")[0]
+    # THIS DOESN'T WORK, VDB-CONFIG CANNOT DISABLE CACHE NON-INTERACTIVELY
+    # AS FAR AS I CAN TELL. UGH. NEED TO ASK USERS TO DO IT WITH -I.
+    # def _set_vdbcfg(self, reset=False):
+    #     # reset to initial value
+    #     if reset:
+    #         cmd0 = [
+    #             "vdb-config", "--set", "cache-disabled:{}"
+    #             .format(self.init_cache)]
+    #         out = sps.Popen(cmd0).communicate()
+    #         logger.debug(
+    #             "{vdb-config} --set cache-disabled:{}"
+    #             .format(self.init_cache))
 
-        # set new cache value to "true"
-        if self.init_cache != "true":
-            cmd0 = [
-                self.binaries["vdb-config"], "--set", "cache-disabled:true"]
-            out = sps.Popen(cmd0).communicate()
-            logger.debug("vdb-config 'cache-disabled' set to 'true'")
+    #     # get and store the initial cache setting
+    #     cmd0 = [self.binaries["vdb-config"], "-a"]
+    #     cmd1 = ["grep", "cache"]
+    #     proc0 = sps.Popen(cmd0, stderr=sps.STDOUT, stdout=sps.PIPE)
+    #     proc1 = sps.Popen(cmd1, stdin=proc0.stdout, stdout=sps.PIPE)
+    #     out = proc1.communicate()
+    #     if proc1.returncode:
+    #         logger.error("Failed: {}".format(out[0].decode()))
+    #         raise OSError("Failed: {}".format(out[0].decode()))
+    #     self.init_cache = out[0].decode().split(">")[-1].split("<")[0]
+
+    #     # set new cache value to "true"
+    #     if self.init_cache != "true":
+    #         cmd0 = [
+    #             self.binaries["vdb-config"], "--set", "cache-disabled:true"]
+    #         out = sps.Popen(cmd0).communicate()
+    #         logger.debug("vdb-config 'cache-disabled' set to 'true'")
 
 
 
@@ -561,7 +564,7 @@ class Kmunity:
     def binary_wrap(self):
         logger.warning("RUNNING ---------------------------------")
         try:
-            self._set_vdbcfg()
+            # self._set_vdbcfg()
             self._x_prefetch()
             self._x_fasterqd()
             self._x_kmerfreq()
@@ -570,7 +573,7 @@ class Kmunity:
 
         finally:
             logger.info("removing tmp workdir")
-            self._set_vdbcfg(reset=True)
+            # self._set_vdbcfg(reset=True)
             self._clean_work()
 
 
