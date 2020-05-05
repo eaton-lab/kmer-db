@@ -9,7 +9,6 @@ from __future__ import print_function
 import os
 import sys
 import glob
-import tempfile
 import subprocess as sps
 
 import requests
@@ -141,13 +140,14 @@ class Kmunity:
 
         # ensure workdir and logdir exist
         for dirname in [self.workdir, self.logdir, self.srrdir]:
-            if not os.path.exists(self.workdir):
+            if not os.path.exists(dirname):
                 os.makedirs(dirname)
 
         # load existing database
         self.data = pd.read_csv(self.csv)
         logger.debug("LOCAL PATHS ----------------------------")
         logger.debug("workdir: {}".format(self.workdir))
+        logger.debug("srrdir: {}".format(self.workdir))        
         logger.debug("logfile: {}".format(self.logfile))
         logger.debug("database: {}".format(self.csv))
         logger.debug("")        
