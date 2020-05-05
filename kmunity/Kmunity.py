@@ -220,14 +220,14 @@ class Kmunity:
 
         if not os.path.exists(bin_gce):
             logger.debug("local gce not found.")
-            self._download_gcetools_to_tmp()
+            self._dl_gce_tmp()
             if not os.path.exists(bin_gce):
                 logger.error("gce tools download failed.")
         self.binaries["gce"] = bin_gce
         self.binaries["kmerfreq"] = bin_kme
 
         if not os.path.exists(bin_pre):
-            self._download_sratools_to_tmp()
+            self._dl_sra_tmp()
             if not os.path.exists(bin_pre):
                 logger.error("sratools download failed.")
         self.binaries["prefetch"] = bin_pre
