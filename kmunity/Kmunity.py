@@ -140,10 +140,9 @@ class Kmunity:
             .format(self.csv))
 
         # ensure workdir and logdir exist
-        if not os.path.exists(self.workdir):
-            os.makedirs(self.workdir)
-        if not os.path.exists(self.logdir):
-            os.makedirs(self.logdir)
+        for dirname in [self.workdir, self.logdir, self.srrdir]:
+            if not os.path.exists(self.workdir):
+                os.makedirs(dirname)
 
         # load existing database
         self.data = pd.read_csv(self.csv)
@@ -534,10 +533,11 @@ class Kmunity:
                 .format(self.init_cache)]
             out = sps.Popen(cmd0).communicate()
             logger.debug(
-                "vdb-config 'cache-disabled' returned to initial value 'true'")
+                "{vdb-config} --set cache-disabled:{}"
+                .format(self.init_cache))
 
         # get and store the initial cache setting
-        cmd0 = ["vdb-config" "-a"]
+        cmd0 = [self.binaries["vdb-config"] "-a"]
         cmd1 = ["grep", "cache"]
         proc0 = sps.Popen(cmd0, stderr=sps.STDOUT, stdout=sps.PIPE)
         proc1 = sps.Popen(cmd1, stdin=proc0.stdout, stdout=sps.PIPE)
@@ -549,7 +549,8 @@ class Kmunity:
 
         # set new cache value to "true"
         if self.init_cache != "true":
-            cmd0 = ["vdb-config", "--set", "cache-disabled:true"]
+            cmd0 = [
+                self.binaries["vdb-config"], "--set", "cache-disabled:true"]
             out = sps.Popen(cmd0).communicate()
             logger.debug("vdb-config 'cache-disabled' set to 'true'")
 
