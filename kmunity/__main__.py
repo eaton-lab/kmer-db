@@ -79,6 +79,14 @@ class CLI:
             default="mammals",
             help="kmunity database to contribute to.")
 
+        # self.parser.add_argument(
+        #     "-t", dest="tmpdir", type=str, 
+        #     default="/tmp/",
+        #     help="path to a director where tmp software will be stored."
+        #     )
+
+
+
 
     def run(self):
         tool = kmunity.Kmunity(
