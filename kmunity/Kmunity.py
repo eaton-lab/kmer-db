@@ -71,6 +71,7 @@ class Kmunity:
         # config setup only
         if kwargs.get("config"):
             self._get_binary()
+            self._vdb_config()
 
         # run checks on existing results, paths and binaries.
         else:
@@ -117,6 +118,7 @@ class Kmunity:
 
             else:
                 # if logfile is unfinished (not completed run) then remove file
+                logger.debug("")
                 logger.debug("LOG FILE")
                 logger.debug(
                     'Clearing previous unfinished run of {}.'
@@ -217,6 +219,10 @@ class Kmunity:
             tempfile.gettempdir(), 
             "sratoolkit.2.10.5-ubuntu64/"
             "bin", "fasterq-dump")
+        bin_vdb = os.path.join(
+            tempfile.gettempdir(), 
+            "sratoolkit.2.10.5-ubuntu64/"
+            "bin", "vdb-config")
 
         if not os.path.exists(bin_gce):
             logger.debug("local gce not found.")
@@ -227,11 +233,13 @@ class Kmunity:
         self.binaries["kmerfreq"] = bin_kme
 
         if not os.path.exists(bin_pre):
+            logger.debug("local sratools >=2.10.5 not found.")            
             self._dl_sra_tmp()
             if not os.path.exists(bin_pre):
                 logger.error("sratools download failed.")
         self.binaries["prefetch"] = bin_pre
         self.binaries["fasterq-dump"] = bin_fas
+        self.binaries["vdb-config"] = bin_vdb
 
         # print software versions
         logger.warning("VERSIONS")
@@ -245,6 +253,7 @@ class Kmunity:
 
     def _dl_gce_tmp(self):
         # pull gce & kmer executables to workdir
+        logger.debug("Downloading gce and kmerfreq to /tmp")
         gce_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/gce"
         kme_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/kmerfreq"
         for url in [gce_url, kme_url]:
@@ -275,6 +284,7 @@ class Kmunity:
 
         # decompress tar file 
         logger.debug("Extracting sratoolkit.2.10.5 in /tmp")
+        logger.debug("")
         cmd = ["tar", "xzvf", tmptar, "-C", tempfile.gettempdir()]
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
         comm = proc.communicate()
@@ -422,6 +432,30 @@ class Kmunity:
 
         # with open(os.path.join(self.srrdir, resfile), 'r') as indata:
             # logger.info("FILE CONTENTS:\n" + "".join(indata.read()))
+
+
+
+    def _vdb_config(self):
+        """
+        Check whether vdb has been config'd. If not, warn user and exit.
+         Check whether vdb-config has cache true, and exit if yes.
+        """
+        # user config file is F&$&*$# FORCED to be in home by sra-tools.
+        logger.warning("CONFIG")
+        logger.info(
+            "To finish config sra-tools *requires* you run vdb-config once.")
+        logger.info(
+            "I highly recommend turning off 'enable local file caching'.")
+        logger.info(
+            "{} -i"
+            .format(self.binaries["vdb-config"]))
+        logger.debug(
+            "This will create a sra-tools config file in {}"
+            .format(os.path.expanduser("~/.ncbi/")))
+
+        logger.debug("")
+        # user config file is F&$&*$# FORCED to be in home by sra-tools.
+
 
 
 
