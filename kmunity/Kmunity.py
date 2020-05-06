@@ -201,7 +201,7 @@ class Kmunity:
         logger.info("GitHub user: {}".format((user if user else "unknown")))
         if not user:
             logger.debug(
-                r"tip: set uesrname with 'git config --global user.name \"Mona Lisa\"'.")
+                "tip: set uesrname with 'git config --global user.name \"Mona Lisa\"'.")
         logger.info("")
 
 
@@ -311,10 +311,10 @@ class Kmunity:
         # log the command used to prefetch
         cmd = [
             self.binaries["prefetch"], self.srr, 
-            "-O", self.workdir,
+            "-O", self.srrdir,
             "-X", str(int(1e9)),
         ]
-        logger.info("Executing: {prefetch} {srr} -O {workdir} -X 1000000000")
+        logger.info("Executing: {prefetch} {srr} -O {srrdir} -X 1000000000")
         logger.debug("Executing: {}".format(" ".join(cmd)))
 
         # call execute        

@@ -1,11 +1,10 @@
 # kmunity (Under development!)
-A community sourced database of genome characteristics (genome size and heterozygosity estimates) extracted from published Illumina data. The goal of this project is to:
+A community sourced database of genome characteristics (genome size and heterozygosity estimates) extracted from published Illumina data. The goal of this project is to provide a simple tool to:
 
-1. Provide a simple tool for downloading Illumina data from NCBI and extracting kmer-based statistics in a unified workflow.
-2. The tool is easy to use, cleans up after itself, and is easily distributed among users and on HPC.
-3. Data are publicly available, continually updated and community maintained through GitHub pull requests.
-4. Log files store details of all analyses.
-5. Samples can be selected by user or auto-populated by querying NCBI for unpopulated results.
+1. Query NCBI Run accession IDs (SRR) to fetch data and metadata. 
+2. Downloading fastq data from NCBI (in a transparent way that does not leave behind zombies like sra-tools.)
+3. Calculate kmer statistics from data. 
+4. Organize results into a public repository on GitHub.
 
 
 ### Repository structure
@@ -20,6 +19,11 @@ A community sourced database of genome characteristics (genome size and heterozy
 |       ├── SRRXXXYYY.log
 |       └── ...
 ├── birds
+│   ├── database.csv
+|   └── logfiles
+|       ├── SRRXXXYYY.log
+|       └── ...
+├── other
 │   ├── database.csv
 |   └── logfiles
 |       ├── SRRXXXYYY.log
@@ -40,13 +44,23 @@ A community sourced database of genome characteristics (genome size and heterozy
 |   Trachypithecus poliocephalus  |   34886  |   SRS3420064    |  SRR7345456    |  121   |   ...    |   ...   |  ... |
 
 
+### Installation (linux only)
+```bash
+# install kmunity
+git clone https://github.com/{username}/kmunity
+cd kmunity/
+pip install .
+
+# configure sra-tools >=v.2.10.5
+kmunity --config
+```
+
+
 ### Contributing to database
 ```bash
 # fork and clone the repo
-git clone https://github.com/{username}/kmunity
 
-# install kmunity
-conda install kmunity -c conda-forge
+
 
 # run tool selecting desired database to contribute to, scratch space, and repo location
 kmunity -d mammals  -w /scratch/tmp  -r ./kmunity
