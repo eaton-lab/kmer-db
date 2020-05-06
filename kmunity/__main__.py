@@ -78,7 +78,7 @@ class CLI:
         self.parser.add_argument(
             "-d", dest="database", type=str, 
             default="mammals",
-            help="kmunity database to contribute to.")
+            help="database to contribute to (mammals, birds, ...)")
 
         self.parser.add_argument(
             "--config", action='store_true',
