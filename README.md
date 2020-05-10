@@ -5,6 +5,7 @@ A community sourced database of genome characteristics (genome size and heterozy
 2. Downloading fastq data from NCBI (in a transparent way that does not leave behind zombies like sra-tools.)
 3. Calculate kmer statistics from data with kmerfreq, gce, etc. 
 4. Organize results into a public repository on GitHub.
+5. Record detailed log files for all contributed analyses.
 
 
 ### Repository structure
