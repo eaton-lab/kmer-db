@@ -201,7 +201,7 @@ class Kmunity:
         logger.info("GitHub user: {}".format((user if user else "unknown")))
         if not user:
             logger.debug(
-                "tip: set uesrname with 'git config --global user.name \"Mona Lisa\"'.")
+                "tip: set username with: git config --global user.name 'Hotdog'")
         logger.info("")
 
 
