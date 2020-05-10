@@ -3,7 +3,7 @@ A community sourced database of genome characteristics (genome size and heterozy
 
 1. Query NCBI Run accession IDs (SRR) to fetch data and metadata. 
 2. Downloading fastq data from NCBI (in a transparent way that does not leave behind zombies like sra-tools.)
-3. Calculate kmer statistics from data. 
+3. Calculate kmer statistics from data with kmerfreq, gce, etc. 
 4. Organize results into a public repository on GitHub.
 
 
@@ -58,18 +58,16 @@ kmunity --config
 
 ### Contributing to database
 ```bash
-# fork and clone the repo
-
-
-
 # run tool selecting desired database to contribute to, scratch space, and repo location
 kmunity -d mammals  -w /scratch/tmp  -r ./kmunity
 
-# or select a specific run
-kmunity -s SRR10028098 -d mammals -w /scratch/tmp  -r ./kmunity
+# or select a specific run ID and kmunity will auto-select the appropriate database
+kmunity -s SRR10028098 -w /scratch/tmp  -r ./kmunity
 
-# cd into dir, diff to see new results, push, and make pull request to origin on GitHub
-cd kmunity
+# cd into dir, diff to see new results, push changes, and make pull request on GitHub.
+cd kmunity/
 git diff 
+git add *
+git commit -m "added stats for SRR10028098"
 git push
 ```
