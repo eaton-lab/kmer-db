@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import os
 import sys
+import uuid
 import glob
 import tempfile
 import subprocess as sps
@@ -17,7 +18,7 @@ import pandas as pd
 import kmunity
 from loguru import logger
 
-from .Fetch import Search_SRR
+from .Fetch import SearchSRR, SearchTerm
 
 
 
@@ -48,18 +49,22 @@ class Kmunity:
     """
     def __init__(self, srr=None, db="mammals", workdir="/tmp", repo="./kmunity", **kwargs):
 
-        # store args
-        self.srr = srr  # (srr if srr else "SRRXXXYYY")
+        # srr is query, db is destination, uuid is name, data is result.
+        self.srr = srr
         self.db = db
-        self.data = None
+        self.uuid = uuid.uuid4().hex
+        self.data = None        
 
-        # expand i/o file paths
+        # the database file is in the repo database dir
         self.repo = os.path.realpath(os.path.expanduser(repo))
         self.csv = os.path.join(self.repo, self.db, "database.csv")
+        
+        # the workdir will store tmpfiles like sras
         self.workdir = os.path.realpath(os.path.expanduser(workdir))
-        self.srrdir = (os.path.join(self.workdir, self.srr) if self.srr else os.path.join(self.workdir, "SRR"))
+
+        # write logfile to logdir within repo database dirs
         self.logdir = os.path.join(self.repo, self.db, "logfiles") 
-        self.logfile = os.path.join(self.logdir, "{}.log".format(self.srr))
+        self.logfile = os.path.join(self.logdir, "{}.log".format(self.uuid))
         self._logger_set()
 
         # check kwargs: e.g., user-supplied binary paths
@@ -145,7 +150,7 @@ class Kmunity:
             .format(self.csv))
 
         # ensure workdir and logdir exist
-        for dirname in [self.workdir, self.logdir, self.srrdir]:
+        for dirname in [self.workdir, self.logdir, self.workdir]:
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
 
@@ -153,7 +158,7 @@ class Kmunity:
         self.data = pd.read_csv(self.csv)
         logger.debug("LOCAL PATHS")
         logger.debug("workdir: {}".format(self.workdir))
-        logger.debug("srrdir: {}".format(self.srrdir))        
+        # logger.debug("srrdir: {}".format(self.srrdir))        
         logger.debug("logfile: {}".format(self.logfile))
         logger.debug("database: {}".format(self.csv))
         logger.debug("")        
@@ -173,23 +178,26 @@ class Kmunity:
         """
         # No user SRR supplied
         if self.srr is None:
-            logger.error("No SRR option not yet supported.")
-            raise NotImplementedError("No SRR option not yet supported.")
+            logger.warning("NCBI QUERY (TERM)")            
+            self.query = SearchTerm(self.db)
+            self.query.run()
+            self.srr = self.query.run
 
         # user SRR supplied
         else:
             # print a log header with info
-            logger.warning("NCBI QUERY")
-            self.query = Search_SRR(self.srr)
+            logger.warning("NCBI QUERY (SRR)")
+            self.query = SearchSRR(self.srr)
             self.query.run()
-            logger.info("database: {}".format(self.db))
-            logger.info("organism: {}".format(self.query.org))
-            logger.info("taxid: {}".format(self.query.tax))
-            logger.info("biosample: {}".format(self.query.bio))
-            logger.info("run: {}".format(self.query.run))
-            logger.info("size (Gb): {}".format(self.query.bases))
-            # logger.info("status: {}".format(bool(self.srr in self.data.Run))
-            logger.info("")
+
+        logger.info("database: {}".format(self.db))
+        logger.info("organism: {}".format(self.query.org))
+        logger.info("taxid: {}".format(self.query.tax))
+        logger.info("biosample: {}".format(self.query.bio))
+        logger.info("run: {}".format(self.query.run))
+        logger.info("size (Gb): {}".format(self.query.bases))
+        # logger.info("status: {}".format(bool(self.srr in self.data.Run))
+        logger.info("")
 
 
 
@@ -326,10 +334,10 @@ class Kmunity:
         # log the command used to prefetch
         cmd = [
             self.binaries["prefetch"], self.srr, 
-            "-O", self.srrdir,
+            "-O", self.workdir,
             "-X", str(int(1e9)),
         ]
-        logger.info("Executing: {prefetch} {srr} -O {srrdir} -X 1000000000")
+        logger.info("Executing: {prefetch} {srr} -O {workdir} -X 1000000000")
         logger.debug("Executing: {}".format(" ".join(cmd)))
 
         # call execute        
@@ -340,7 +348,7 @@ class Kmunity:
             raise Exception(out[0].decode())
 
         # show file size result
-        srafile = os.path.join(self.srrdir, self.srr + ".sra")
+        srafile = os.path.join(self.workdir, self.srr + ".sra")
         if not os.path.exists(srafile):
             logger.error("Prefetch failed, no sra file found.")
             raise IOError("Prefetch failed, no sra file found.")
@@ -367,8 +375,8 @@ class Kmunity:
         # commands to the logger
         cmd = [
             self.binaries["fasterq-dump"], self.srr, 
-            "-O", self.srrdir,
-            "-t", self.srrdir,
+            "-O", self.workdir,
+            "-t", self.workdir,
         ]
         null = "{fasterq-dump} {srr} -O {workdir}/{srr} -t {workdir}/{srr}"
         logger.info("Executing: {}".format(null))
@@ -390,14 +398,14 @@ class Kmunity:
             raise TypeError(out[0].decode())
 
         # write a tmp SRR.lib file
-        libfile = os.path.join(self.srrdir, "{}_files.lib".format(self.srr))
-        fastqs = glob.glob(os.path.join(self.srrdir, "*.fastq"))
+        libfile = os.path.join(self.workdir, "{}_files.lib".format(self.srr))
+        fastqs = glob.glob(os.path.join(self.workdir, "*.fastq"))
         with open(libfile, 'w') as out:
             out.write("\n".join(fastqs))
 
         # show file size result
         f1 = self.srr + "_1.fastq"
-        fastq1 = os.path.join(self.srrdir, f1)
+        fastq1 = os.path.join(self.workdir, f1)
         size1 = os.path.getsize(fastq1)
         size1 = round(size1 / 1e9, 2)
 

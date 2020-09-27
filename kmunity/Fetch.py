@@ -5,11 +5,11 @@
 Search NCBI API for SRR Illumina data not yet in database.
 """
 
+import time
 import requests
 import xml.etree.ElementTree as ET
 import pandas as pd
-import time
-
+import numpy as np
 
 
 MAMMALS_TERM = """
@@ -41,23 +41,60 @@ EXCLUDE_TAXIDS = [9606, 10090, 9615]
 
 
 
-class Search_SRR:
+class SearchSRR(object):
+    """
+    Search NCBI for a specific SRR match.
+    """
     def __init__(self, srr):
         self.srr = srr
 
 
-    def run(self):
-        # get internal ids for this search
+    def run(self, sleep=10):
+        # get internal ids for this search. A list of matches.
         self.uids = get_uids(self.srr)
-        time.sleep(10)
+        time.sleep(sleep)
 
         # get runinfo for all files associated with this run
-        self.xml = get_runinfo(self.uids)
-        time.sleep(10)        
+        self.xml = get_runinfo(self.uids[:10])
+        time.sleep(sleep)
 
         # extract srr result for the .sra release
         self.res = parse_runinfo(self.xml)
+
+        # if the extraction worked, then continue
         self.bio, self.org, self.tax, self.bases, self.run = self.res[0]
+
+
+
+class SearchTerm(object):
+    """
+    Search NCBI for a match to a search term from a supported database.
+    """
+    def __init__(self, db):
+        self.db = db
+        self.term = MAMMALS_TERM  # if self.db = "mammals" else "birds")
+
+
+    def run(self, sleep=5.5):
+        """
+        sample a random UID that is NOT YET IN the database.
+        """
+        self.nuids = count_uids(self.term)
+        self.uids = get_uids(self.term, retstart=0, retmax=self.nuids)
+
+        # continue until we find a match.
+        self.rinfo = None
+        ntries = 0
+        while not self.rinfo:
+            self.uid = [self.uids[np.random.randint(self.nuids)]]
+            self.xml = get_runinfo(self.uid)
+            self.rinfo = parse_runinfo(self.xml, mincov_gb=0)
+            ntries += 1
+            time.sleep(sleep)
+
+        # if the extraction worked, then continue
+        # print(self.uid, ntries, self.rinfo)
+        self.bio, self.org, self.tax, self.bases, self.run = self.rinfo[0]
 
 
 
@@ -83,8 +120,11 @@ def count_uids(term):
 
 
 
-def get_uids(term, retstart=0, retmax=20):
-    "Search NCBI nucleotide database and return N sequence matches"
+def get_uids(term, retstart=0, retmax=200):
+    """
+    Search NCBI nucleotide database and return UIDS for N matches to search term. 
+    The max searches allowed SEEMS to be around 5000.
+    """
 
     # make a request to esearch 
     res = requests.get(
@@ -110,7 +150,7 @@ def get_uids(term, retstart=0, retmax=20):
     # return the list of UIDs
     uids = []
     ids = res.text.split("<IdList>")[1].split("</IdList>")[0].strip()
-    for item in ids.split("\n"):
+    for item in ids.split("\n\t"):
         uids.append(item[4:-5])
     return uids    
 
@@ -119,7 +159,8 @@ def get_uids(term, retstart=0, retmax=20):
 
 def get_runinfo(uids):
     """
-
+    Search NCBI for metadata (runinfo) by supplying UIDs. The max allowed 
+    searches for this seems to be small, like 20 or so.
     """
     res = requests.get(
         url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
@@ -136,10 +177,10 @@ def get_runinfo(uids):
 
 
 
-def parse_runinfo(xml, mincov_gb=5, exclude_taxids=EXCLUDE_TAXIDS):
+def parse_runinfo(xml, mincov_gb=10, exclude_taxids=EXCLUDE_TAXIDS):
     """
     Sift through UID matches to find hits with WGS data of sufficient amounts.
-        """
+    """
     tree = ET.fromstring(xml)
     data = []
     tax_id = None
@@ -154,7 +195,7 @@ def parse_runinfo(xml, mincov_gb=5, exclude_taxids=EXCLUDE_TAXIDS):
                                 accession = member.attrib["accession"]
                                 organism = member.attrib["organism"]
                                 tax_id = int(member.attrib["tax_id"])
-                                bases = int(int(member.attrib["bases"]) / 1e9)
+                                gbases = int(int(member.attrib["bases"]) / 1e9)
 
                         if pool.tag == "SRAFiles":
                             for member in pool:
@@ -164,9 +205,13 @@ def parse_runinfo(xml, mincov_gb=5, exclude_taxids=EXCLUDE_TAXIDS):
 
         # exclude some from table
         if tax_id:
-            if bases > mincov_gb:
+            if gbases > mincov_gb:
                 if tax_id not in exclude_taxids:
-                    data.append([accession, organism, tax_id, bases, SRR])
+                    data.append([accession, organism, tax_id, gbases, SRR])
+                else:
+                    print("dropped: organism in EXCLUDED_TAXON set.")
+            else:
+                print("dropped: too little data.")
     return data
 
 
