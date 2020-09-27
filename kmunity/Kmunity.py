@@ -375,8 +375,8 @@ class Kmunity:
         # commands to the logger
         cmd = [
             self.binaries["fasterq-dump"], self.srr, 
-            "-O", self.workdir,
-            "-t", self.workdir,
+            "-O", os.path.join(self.workdir, self.srr),
+            "-t", os.path.join(self.workdir, self.srr),
         ]
         null = "{fasterq-dump} {srr} -O {workdir}/{srr} -t {workdir}/{srr}"
         logger.info("Executing: {}".format(null))
@@ -405,12 +405,12 @@ class Kmunity:
 
         # show file size result
         f1 = self.srr + "_1.fastq"
-        fastq1 = os.path.join(self.workdir, f1)
+        fastq1 = os.path.join(self.workdir, self.srr, f1)
         size1 = os.path.getsize(fastq1)
         size1 = round(size1 / 1e9, 2)
 
         f2 = self.srr + "_2.fastq"
-        fastq2 = os.path.join(self.srrdir, f2)
+        fastq2 = os.path.join(self.workdir, self.srr, f2)
         size2 = os.path.getsize(fastq2)
         size2 = round(size2 / 1e9, 2)
 
@@ -434,17 +434,17 @@ class Kmunity:
 
 
         # call the tool
-        lib = os.path.join(self.srrdir, "{}_files.lib".format(self.srr))
+        lib = os.path.join(self.workdir, self.srr, "{}_files.lib".format(self.srr))
         cmd = [
             self.binaries["kmerfreq"],
             "-k", "17",
             "-t", "4",
-            "-p", os.path.join(self.srrdir, self.srr),
+            "-p", os.path.join(self.workdir, self.srr, self.srr),
             lib,
         ]
 
         # do not log local files paths
-        null = "{kmerfreq} -k 17 -t 4 -p {srrdir}/{srr} {srrdir}/{srr}_files.lib"
+        null = "{kmerfreq} -k 17 -t 4 -p {workdir}/{srr}/{srr} {workdir}/{srr}/{srr}_files.lib"
         logger.info("Executing: {}".format(null))
         logger.debug("Executing: {}".format(" ".join(cmd)))
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
@@ -528,10 +528,10 @@ class Kmunity:
             return vers
 
         # prerun commands 
-        resfile = os.path.join(self.srrdir, self.srr + ".kmer.freq.stat")
+        resfile = os.path.join(self.workdir, self.srr, self.srr + ".kmer.freq.stat")
         cmd1 = ['cat', resfile]
         cmd2 = ['grep', '#Kmer indivdual number']  # (sic)
-        null = "cat {srrdir}/{srr}.kmer.freq.stat | grep '#Kmer indiv'"
+        null = "cat {workdir}/{srr}/{srr}.kmer.freq.stat | grep '#Kmer indiv'"
         logger.info("Executing {}:".format(null))
         logger.debug("Executing: {}".format(" ".join(cmd1)))
         proc1 = sps.Popen(cmd1, stderr=sps.STDOUT, stdout=sps.PIPE)
@@ -617,7 +617,7 @@ class Kmunity:
         Remove any temp files.
         """
         logger.info("Removing temp files in {workdir}")
-        logger.debug("Removing: {}".format(self.srrdir))
+        logger.debug("Removing: {}".format(self.workdir, self.srr))
 
 
 
