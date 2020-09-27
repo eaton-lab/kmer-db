@@ -57,7 +57,7 @@ class Kmunity:
         self.repo = os.path.realpath(os.path.expanduser(repo))
         self.csv = os.path.join(self.repo, self.db, "database.csv")
         self.workdir = os.path.realpath(os.path.expanduser(workdir))
-        self.srrdir = os.path.join(self.workdir, self.srr)
+        self.srrdir = (os.path.join(self.workdir, self.srr) if self.srr else os.path.join(self.workdir, "SRR"))
         self.logdir = os.path.join(self.repo, self.db, "logfiles") 
         self.logfile = os.path.join(self.logdir, "{}.log".format(self.srr))
         self._logger_set()
