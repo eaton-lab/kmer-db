@@ -348,7 +348,7 @@ class Kmunity:
             raise Exception(out[0].decode())
 
         # show file size result
-        srafile = os.path.join(self.workdir, self.srr + ".sra")
+        srafile = os.path.join(self.workdir, self.srr, self.srr + ".sra")
         if not os.path.exists(srafile):
             logger.error("Prefetch failed, no sra file found.")
             raise IOError("Prefetch failed, no sra file found.")
@@ -617,7 +617,7 @@ class Kmunity:
         Remove any temp files.
         """
         logger.info("Removing temp files in {workdir}")
-        logger.debug("Removing: {}".format(self.workdir, self.srr))
+        logger.debug("Removing: {}/{}".format(self.workdir, srr))
 
 
 
