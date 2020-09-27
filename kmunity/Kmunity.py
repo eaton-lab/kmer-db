@@ -49,9 +49,11 @@ class Kmunity:
     def __init__(self, srr=None, db="mammals", workdir="/tmp", repo="./kmunity", **kwargs):
 
         # store args
-        self.srr = (srr if srr else "SRRXXXYYY")
+        self.srr = srr  # (srr if srr else "SRRXXXYYY")
         self.db = db
         self.data = None
+
+        # expand i/o file paths
         self.repo = os.path.realpath(os.path.expanduser(repo))
         self.csv = os.path.join(self.repo, self.db, "database.csv")
         self.workdir = os.path.realpath(os.path.expanduser(workdir))
@@ -83,6 +85,9 @@ class Kmunity:
 
 
     def _logger_set(self):
+        """
+        Configure Loguru to log to stdout and logfile.
+        """
         # add stdout logger
         config = {
             "handlers": [
@@ -214,15 +219,15 @@ class Kmunity:
         bin_kme = os.path.join(tempfile.gettempdir(), "kmerfreq")
         bin_pre = os.path.join(
             tempfile.gettempdir(), 
-            "sratoolkit.2.10.5-ubuntu64/"
+            "sratoolkit.2.10.8-ubuntu64/"
             "bin", "prefetch")
         bin_fas = os.path.join(
             tempfile.gettempdir(), 
-            "sratoolkit.2.10.5-ubuntu64/"
+            "sratoolkit.2.10.8-ubuntu64/"
             "bin", "fasterq-dump")
         bin_vdb = os.path.join(
             tempfile.gettempdir(), 
-            "sratoolkit.2.10.5-ubuntu64/"
+            "sratoolkit.2.10.8-ubuntu64/"
             "bin", "vdb-config")
 
         if not os.path.exists(bin_gce):
@@ -234,7 +239,7 @@ class Kmunity:
         self.binaries["kmerfreq"] = bin_kme
 
         if not os.path.exists(bin_pre):
-            logger.debug("local sratools >=2.10.5 not found.")            
+            logger.debug("local sratools >=2.10.8 not found.")            
             self._dl_sra_tmp()
             if not os.path.exists(bin_pre):
                 logger.error("sratools download failed.")
@@ -253,6 +258,9 @@ class Kmunity:
 
 
     def _dl_gce_tmp(self):
+        """
+        Downloads gce and kmerfreq binaries, checks +x, and locates to tmp.
+        """
         # pull gce & kmer executables to workdir
         logger.debug("Downloading gce and kmerfreq to /tmp")
         gce_url = "https://github.com/fanagislab/GCE/raw/master/gce-1.0.2/gce"
@@ -273,9 +281,13 @@ class Kmunity:
 
 
     def _dl_sra_tmp(self):
-        logger.debug("Downloading sratoolkit.2.10.5 to /tmp")
+        """
+        Downloads sratools (linux), checks +x, and locates to tmp.
+        """
+        logger.debug("Downloading sratoolkit.2.10.8 to /tmp")
         # pull in version 2.10.5 of sra-tools (ONLY THIS VERSION WORKS)
-        url = "https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.5/sratoolkit.2.10.5-ubuntu64.tar.gz"
+        # https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.8/
+        url = "https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.8/sratoolkit.2.10.8-ubuntu64.tar.gz"
         tmptar = os.path.join(tempfile.gettempdir(), os.path.basename(url))
         res = requests.get(url, stream=True)
         res.raise_for_status()
@@ -284,7 +296,7 @@ class Kmunity:
             tz.write(res.raw.read()) 
 
         # decompress tar file 
-        logger.debug("Extracting sratoolkit.2.10.5 in /tmp")
+        logger.debug("Extracting sratoolkit.2.10.8 in /tmp")
         logger.debug("")
         cmd = ["tar", "xzvf", tmptar, "-C", tempfile.gettempdir()]
         proc = sps.Popen(cmd, stderr=sps.STDOUT, stdout=sps.PIPE)
@@ -295,7 +307,10 @@ class Kmunity:
 
 
     def _x_prefetch(self, version_only=False):
-
+        """
+        - if version: Check for prefetch tool from sratools by calling -V
+        - Calls prefetch on self.srr and reports .sra download success.
+        """
         if version_only:
             # print the version
             proc = sps.Popen(
@@ -305,7 +320,7 @@ class Kmunity:
             )
             out = proc.communicate()
             if proc.returncode:
-                logger.error("tool not found.")
+                logger.error("prefetch tool not found.")
             return out[0].decode().split()[-1]
 
         # log the command used to prefetch
@@ -336,7 +351,9 @@ class Kmunity:
 
 
     def _x_fasterqd(self, version_only=False):
-
+        """
+        
+        """
         if version_only:
             # print the version
             proc = sps.Popen(
@@ -367,8 +384,8 @@ class Kmunity:
                 "sufficient space available in your working dir then the "
                 "is being caused by the insane behavior of the sra-tools "
                 "package which hides large tmp file in obscure places. "
-                "You can turn off this behavior by running vdb-config -i and "
-                "turning off the 'enable local file caching' option."
+                "You can turn off this behavior by running 'vdb-config -i'."
+                "Turn off the 'enable local file caching' option."
                 )
             raise TypeError(out[0].decode())
 
@@ -580,10 +597,17 @@ class Kmunity:
 
 
     def parse_results(self):
+        """
+        Copy results from logfile to the CSV database table.
+        [uid, organism, taxid, biosample, run, data-size, k, g-size, cov, het, filter-opts]
+        """
         pass
 
 
     def _clean_work(self):
+        """
+        Remove any temp files.
+        """
         logger.info("Removing temp files in {workdir}")
         logger.debug("Removing: {}".format(self.srrdir))
 
@@ -647,5 +671,5 @@ if __name__ == "__main__":
 
     # SRS3758609    Ursus americanus    9643    11  SRR7811753
     SRR = "SRR7811753"
-    tool = Kmunity(SRR, workdir="/home/deren/Downloads/SRRHET")
+    tool = Kmunity(SRR, workdir="/home/deren/Downloads/kmunity-tmps")
     tool.binary_wrap()
