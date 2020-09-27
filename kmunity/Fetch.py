@@ -118,6 +118,9 @@ def get_uids(term, retstart=0, retmax=20):
 
 
 def get_runinfo(uids):
+    """
+
+    """
     res = requests.get(
         url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
         params={
@@ -134,6 +137,9 @@ def get_runinfo(uids):
 
 
 def parse_runinfo(xml, mincov_gb=5, exclude_taxids=EXCLUDE_TAXIDS):
+    """
+    Sift through UID matches to find hits with WGS data of sufficient amounts.
+        """
     tree = ET.fromstring(xml)
     data = []
     tax_id = None
@@ -158,7 +164,12 @@ def parse_runinfo(xml, mincov_gb=5, exclude_taxids=EXCLUDE_TAXIDS):
 
         # exclude some from table
         if tax_id:
-            if bases > 5:
+            if bases > mincov_gb:
                 if tax_id not in exclude_taxids:
                     data.append([accession, organism, tax_id, bases, SRR])
     return data
+
+
+
+if __name__ == "__main__":
+    pass
