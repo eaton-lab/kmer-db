@@ -52,7 +52,7 @@ class Kmunity:
         # srr is query, db is destination, uuid is name, data is result.
         self.srr = srr
         self.db = db
-        self.uuid = uuid.uuid4().hex
+        self.uid = uuid.uuid4().hex
         self.data = None        
 
         # the database file is in the repo database dir
@@ -64,7 +64,7 @@ class Kmunity:
 
         # write logfile to logdir within repo database dirs
         self.logdir = os.path.join(self.repo, self.db, "logfiles") 
-        self.logfile = os.path.join(self.logdir, "{}.log".format(self.uuid))
+        self.logfile = os.path.join(self.logdir, "{}.log".format(self.uid))
         self._logger_set()
 
         # check kwargs: e.g., user-supplied binary paths
@@ -157,16 +157,10 @@ class Kmunity:
         # load existing database
         self.data = pd.read_csv(self.csv)
         logger.debug("LOCAL PATHS")
+        logger.debug("uid: {}".format(self.uid))        
         logger.debug("workdir: {}".format(self.workdir))
-        # logger.debug("srrdir: {}".format(self.srrdir))        
-        logger.debug("logfile: {}".format(self.logfile))
         logger.debug("database: {}".format(self.csv))
         logger.debug("")        
-
-
-        # curdb = pd.read_csv(self.csv)
-        # if not os.path.exists(self.kwargs['outdir']):
-            # os.makedirs(self.kwargs['outdir'])
 
 
 
@@ -291,10 +285,11 @@ class Kmunity:
     def _dl_sra_tmp(self):
         """
         Downloads sratools (linux), checks +x, and locates to tmp.
+        **Tentatively** sratools seems to (finally) be stable and 
+        working on conda now, so perhaps we can move to using conda 
+        installation soon and get rid of this function.
         """
         logger.debug("Downloading sratoolkit.2.10.8 to /tmp")
-        # pull in version 2.10.5 of sra-tools (ONLY THIS VERSION WORKS)
-        # https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.8/
         url = "https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.10.8/sratoolkit.2.10.8-ubuntu64.tar.gz"
         tmptar = os.path.join(tempfile.gettempdir(), os.path.basename(url))
         res = requests.get(url, stream=True)
@@ -441,7 +436,7 @@ class Kmunity:
             self.binaries["kmerfreq"],
             "-k", "17",
             "-t", "4",
-            "-p", os.path.join(self.workdir, self.srr, self.srr),
+            "-p", os.path.join(self.workdir, self.srr),
             lib,
         ]
 

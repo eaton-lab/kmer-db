@@ -177,7 +177,7 @@ def get_runinfo(uids):
 
 
 
-def parse_runinfo(xml, mincov_gb=10, exclude_taxids=EXCLUDE_TAXIDS):
+def parse_runinfo(xml, mincov_gb=0, exclude_taxids=EXCLUDE_TAXIDS):
     """
     Sift through UID matches to find hits with WGS data of sufficient amounts.
     """
@@ -209,9 +209,11 @@ def parse_runinfo(xml, mincov_gb=10, exclude_taxids=EXCLUDE_TAXIDS):
                 if tax_id not in exclude_taxids:
                     data.append([accession, organism, tax_id, gbases, SRR])
                 else:
-                    print("dropped: organism in EXCLUDED_TAXON set.")
+                    pass
+                    # print("dropped: organism in EXCLUDED_TAXON set.")
             else:
-                print("dropped: too little data.")
+                pass
+                # print("dropped: too little data.")
     return data
 
 
