@@ -360,7 +360,7 @@ class Kmunity:
 
     def _x_fasterqd(self, version_only=False):
         """
-        
+        Call fasterq-dump on SRR id to convert .sra file to .fastq files.
         """
         if version_only:
             # print the version
@@ -372,7 +372,7 @@ class Kmunity:
             out = proc.communicate()[0].decode().split()[-1]
             return out
 
-        # commands to the logger
+        # command and logger message
         cmd = [
             self.binaries["fasterq-dump"], self.srr, 
             "-O", os.path.join(self.workdir, self.srr),
@@ -398,8 +398,8 @@ class Kmunity:
             raise TypeError(out[0].decode())
 
         # write a tmp SRR.lib file
-        libfile = os.path.join(self.workdir, "{}_files.lib".format(self.srr))
-        fastqs = glob.glob(os.path.join(self.workdir, "*.fastq"))
+        libfile = os.path.join(self.workdir, self.srr, "{}_files.lib".format(self.srr))
+        fastqs = glob.glob(os.path.join(self.workdir, self.srr, "*.fastq"))
         with open(libfile, 'w') as out:
             out.write("\n".join(fastqs))
 
@@ -420,7 +420,9 @@ class Kmunity:
 
 
     def _x_kmerfreq(self, version_only=False):
-
+        """
+        Create a file with list of fastq files and feed it to kmerfreq.
+        """
         if version_only:
             proc = sps.Popen(
                 [self.binaries["kmerfreq"], "-h"],
@@ -514,7 +516,9 @@ class Kmunity:
 
 
     def _x_call_gce(self, version_only=False):
-
+        """
+        Call GCE on kmerfreq table to estimate genome characters
+        """
         if version_only:
             # print the version
             proc = sps.Popen(
@@ -617,7 +621,7 @@ class Kmunity:
         Remove any temp files.
         """
         logger.info("Removing temp files in {workdir}")
-        logger.debug("Removing: {}/{}".format(self.workdir, srr))
+        logger.debug("Removing: {}/{}".format(self.workdir, self.srr))
 
 
 
