@@ -44,6 +44,7 @@ class CLI:
         # configure kmunity and sratools
         if self.args.config:
             self.config()
+
         # finally run the requested functions
         else:
             self.run()
@@ -84,6 +85,10 @@ class CLI:
             "--config", action='store_true',
             help="configure kmunity with sra-tools")
 
+        self.parser.add_argument(
+            "--search", action='store_true',
+            help="search for an SRR from db")
+
 
         # self.parser.add_argument(
         #     "-t", dest="tmpdir", type=str, 
@@ -103,7 +108,8 @@ class CLI:
             self.args.workdir, 
             self.args.repo,
         )
-        tool.binary_wrap()
+        if not self.args.search:
+            tool.binary_wrap()
 
 
 
