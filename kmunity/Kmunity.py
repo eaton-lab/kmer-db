@@ -78,7 +78,7 @@ class Kmunity:
         # config setup only
         if kwargs.get("config"):
             self._get_binary()
-            self._vdb_config()
+            # self._vdb_config()
 
         # run checks on existing results, paths and binaries.
         else:
@@ -248,6 +248,7 @@ class Kmunity:
         self.binaries["prefetch"] = bin_pre
         self.binaries["fasterq-dump"] = bin_fas
         self.binaries["vdb-config"] = bin_vdb
+        self._set_vdbcfg()
 
         # print software versions
         logger.warning("VERSIONS")
@@ -458,26 +459,26 @@ class Kmunity:
 
 
 
-    def _vdb_config(self):
-        """
-        Check whether vdb has been config'd. If not, warn user and exit.
-         Check whether vdb-config has cache true, and exit if yes.
-        """
-        # user config file is F&$&*$# FORCED to be in home by sra-tools.
-        logger.warning("CONFIG")
-        logger.info(
-            "To finish config sra-tools *requires* you run vdb-config once.")
-        logger.info(
-            "I highly recommend turning off 'enable local file caching'.")
-        logger.info(
-            "{} -i"
-            .format(self.binaries["vdb-config"]))
-        logger.debug(
-            "This will create a sra-tools config file in {}"
-            .format(os.path.expanduser("~/.ncbi/")))
-
-        logger.debug("")
-        # user config file is F&$&*$# FORCED to be in home by sra-tools.
+    # def _vdb_config(self):
+    #     """
+    #     Check whether vdb has been config'd. If not, warn user and exit.
+    #      Check whether vdb-config has cache true, and exit if yes.
+    #     """
+    #     # user config file is F&$&*$# FORCED to be in home by sra-tools.
+    #     logger.warning("CONFIG")
+    #     logger.info(
+    #         "To finish config sra-tools *requires* you run vdb-config once.")
+    #     logger.info(
+    #         "I highly recommend turning off 'enable local file caching'.")
+    #     logger.info(
+    #         "{} -i"
+    #         .format(self.binaries["vdb-config"]))
+    #     logger.debug(
+    #         "This will create a sra-tools config file in {}"
+    #         .format(os.path.expanduser("~/.ncbi/")))
+    #
+    #     logger.debug("")
+    #     # user config file is F&$&*$# FORCED to be in home by sra-tools.
 
 
 
@@ -623,36 +624,39 @@ class Kmunity:
 
     # THIS DOESN'T WORK, VDB-CONFIG CANNOT DISABLE CACHE NON-INTERACTIVELY
     # AS FAR AS I CAN TELL. UGH. NEED TO ASK USERS TO DO IT WITH -I.
-    # def _set_vdbcfg(self, reset=False):
-    #     # reset to initial value
-    #     if reset:
-    #         cmd0 = [
-    #             "vdb-config", "--set", "cache-disabled:{}"
-    #             .format(self.init_cache)]
-    #         out = sps.Popen(cmd0).communicate()
-    #         logger.debug(
-    #             "{vdb-config} --set cache-disabled:{}"
-    #             .format(self.init_cache))
+    def _set_vdbcfg(self, reset=False):
+        # only "--interactive-mode graphical" works for initialization
+        if not os.path.exists("~/.ncbi/user-settings.mkfg"):
+            cmd = [self.binaries["vdb-config"], "-i"]
+            proc = sps.Popen(cmd, stdin=sps.PIPE, stderr=sps.PIPE, stdout=sps.PIPE)
+            proc.wait()
 
-    #     # get and store the initial cache setting
-    #     cmd0 = [self.binaries["vdb-config"], "-a"]
-    #     cmd1 = ["grep", "cache"]
-    #     proc0 = sps.Popen(cmd0, stderr=sps.STDOUT, stdout=sps.PIPE)
-    #     proc1 = sps.Popen(cmd1, stdin=proc0.stdout, stdout=sps.PIPE)
-    #     out = proc1.communicate()
-    #     if proc1.returncode:
-    #         logger.error("Failed: {}".format(out[0].decode()))
-    #         raise OSError("Failed: {}".format(out[0].decode()))
-    #     self.init_cache = out[0].decode().split(">")[-1].split("<")[0]
+        # # reset to initial value
+        # if reset:
+        #     cmd0 = [
+        #         "vdb-config", "--set", "cache-disabled:{}"
+        #         .format(self.init_cache)]
+        #     out = sps.Popen(cmd0).communicate()
+        #     logger.debug(
+        #         "{vdb-config} --set cache-disabled:{}"
+        #         .format(self.init_cache))
 
-    #     # set new cache value to "true"
-    #     if self.init_cache != "true":
-    #         cmd0 = [
-    #             self.binaries["vdb-config"], "--set", "cache-disabled:true"]
-    #         out = sps.Popen(cmd0).communicate()
-    #         logger.debug("vdb-config 'cache-disabled' set to 'true'")
+        # get and store the initial cache setting
+        # cmd0 = [self.binaries["vdb-config"], "-a"]
+        # cmd1 = ["grep", "cache"]
+        # proc0 = sps.Popen(cmd0, stderr=sps.STDOUT, stdout=sps.PIPE)
+        # proc1 = sps.Popen(cmd1, stdin=proc0.stdout, stdout=sps.PIPE)
+        # out = proc1.communicate()
+        # if proc1.returncode:
+        #     logger.error("Failed: {}".format(out[0].decode()))
+        #     raise OSError("Failed: {}".format(out[0].decode()))
+        # self.init_cache = out[0].decode().split(">")[-1].split("<")[0]
 
-
+        # set new cache value to "true"
+        cmd0 = [
+            self.binaries["vdb-config"], "--set", "/repository/user/main/public/cache-disabled=true"]
+        out = sps.Popen(cmd0).communicate()
+        logger.debug("vdb-config 'cache-disabled' set to 'true'")
 
 
 
