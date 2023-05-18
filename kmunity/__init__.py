@@ -4,4 +4,5 @@
 __version__ = "0.0.3"
 
 
-from .Kmunity import Kmunity
+# from kmunity.core import Kmunity
+from kmunity.logger_setup import set_log_level

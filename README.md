@@ -1,6 +1,14 @@
 # kmunity (Under development!)
 A community sourced database of genome characteristics (genome size and heterozygosity estimates) extracted from published Illumina data. The goal of this project is to provide a simple tool to:
 
+
+#### New TODO: Move to GCP Bigquery
+- https://www.youtube.com/watch?v=PoseTXa8LU8&list=PLH-TjWpFfWrt5MNqU7Jvsk73QefO3ADwD&index=3  
+- Data transfer with buckets  
+- Avoid slow and expensive need for data egress (downloads)  
+- ...
+
+
 1. Query NCBI Run accession IDs (SRR) to fetch data and metadata. 
 2. Downloading fastq data from NCBI (in a transparent way that does not leave behind zombies like sra-tools.)
 3. Calculate kmer statistics from data with kmerfreq, gce, etc. 

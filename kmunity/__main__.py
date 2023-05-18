@@ -2,14 +2,10 @@
 
 """ command line tool for kmunity"""
 
-
-from __future__ import print_function
-
 from pkg_resources import get_distribution
 import argparse
 import sys
 import kmunity
-
 
 
 EPILOG = """
@@ -24,8 +20,7 @@ EPILOG = """
 
 
 class CLI:
-    """
-    Command line tool for Kmunity GCE analysis.
+    """Command line tool for Kmunity GCE analysis.
     """
     def __init__(self):
 
@@ -49,7 +44,6 @@ class CLI:
         else:
             self.run()
 
-
     def _parse_command_line(self):
         """ Parse CLI args."""
 
@@ -57,10 +51,10 @@ class CLI:
         if len(sys.argv) == 1:
             self.parser.print_help()
 
-        # add arguments 
+        # add arguments
         self.parser.add_argument(
-            '-v', '--version', 
-            action='version', 
+            '-v', '--version',
+            action='version',
             version=str(get_distribution('kmunity')),
         )
 
@@ -77,7 +71,7 @@ class CLI:
             help="path to working directory where tmp files will be stored.")
 
         self.parser.add_argument(
-            "-d", dest="database", type=str, 
+            "-d", dest="database", type=str,
             default="mammals",
             help="database to contribute to (mammals, birds, ...)")
 
@@ -89,44 +83,29 @@ class CLI:
             "--search", action='store_true',
             help="search for an SRR from db")
 
-
         # self.parser.add_argument(
-        #     "-t", dest="tmpdir", type=str, 
+        #     "-t", dest="tmpdir", type=str,
         #     default="/tmp/",
         #     help="path to a director where tmp software will be stored."
         #     )
 
-
     def config(self):
         kmunity.Kmunity(config=True)
 
-
     def run(self):
         tool = kmunity.Kmunity(
-            self.args.srr, 
-            self.args.database, 
-            self.args.workdir, 
+            self.args.srr,
+            self.args.database,
+            self.args.workdir,
             self.args.repo,
         )
         if not self.args.search:
             tool.binary_wrap()
 
 
-
-# HEADER = """
-#  -------------------------------------------------------------
-#   ipyrad [v.{}]
-#   Interactive assembly and analysis of RAD-seq data
-#  -------------------------------------------------------------\
-#  """.format(str(get_distribution('ipyrad')).split()[1])
-# # ip.__version__)
-
-
-
-
 def main():
     CLI()
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     main()
