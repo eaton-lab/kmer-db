@@ -1,2 +1,1 @@
-,Organism,Taxid,Biosample,Run,Bases_Gb,Genome_Size,Heterozygosity
-
+,SRS,SAMN,SRR,tax_id,organism,bases,genome_size,heterozygosity
