@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
-
 """Search NCBI API for SRR Illumina data not yet in database.
+
 """
 
 from typing import List, Iterator, Dict, Any
-# import time
-import requests
+from pathlib import Path
 import xml.etree.ElementTree as ET
+import requests
 from loguru import logger
+import pandas as pd
 
 logger = logger.bind(name="kmunity")
-# import pandas as pd
 
 
 MAMMALS_TERM = """
@@ -57,6 +57,13 @@ class EntrezFetch:
     >>> for i in range(10):
     >>>     print(next(birds))
     """
+    def __init__(self, database: str):
+        # Entrez search term for database WGS data
+        assert database in ("mammals", "birds")
+        self.database = database
+        self.term = MAMMALS_TERM if database == "mammals" else BIRDS_TERM
+        self.data = pd.read_csv(Path(f"../{database}") / "database.csv", index_col=0)
+
     def _iter_searched_uids(self, term, chunksize: int = 20) -> Iterator[List[int]]:
         """Yield a chunk of uids matching the search term.
         """
@@ -69,35 +76,26 @@ class EntrezFetch:
             yield uids
 
     def get_runinfo(self, srr: str = None, min_bases: float = 1e9) -> Dict[str, Any]:
-        """Return ... for a single """
+        """Return runinfo for a single SRR if it passes min-bases filter"""
         xml = get_runinfo_batch_xml([srr])
-        for rdict in iter_runinfo_from_xml(xml, min_bases):
-            yield rdict
-        # return next(iter_runinfo_from_xml(xml, min_bases))
+        return list(iter_runinfo_from_xml(xml, min_bases))
 
-    def iter_runinfo(self, database: str, min_bases: float = 1e9) -> Iterator[Dict[str, Any]]:
-        """sample a random UID that is NOT YET IN the database.
+    def iter_runinfo(self, min_bases: float = 1e9) -> Iterator[Dict[str, Any]]:
+        """Generator of RunInfo dicts for SRR runs not yet in database.
 
         Fetches a _batch_ of entrez sra data, check for new sample not
         yet in database and which has sufficient data for kmer analysis.
         If no new samples in batch, then sample the next batch until
         a sample is found.
         """
-        # Entrez search term for database WGS data
-        term: str = MAMMALS_TERM if database == "mammals" else BIRDS_TERM
-
         # iterate over matches in the database
-        for uids in self._iter_searched_uids(term):
-
-            # skip any uids already in dataset
-            # logger.info(uids)
+        for uids in self._iter_searched_uids(self.term):
 
             # fetch runinfo from NCBI as XML and parse it.
             xml = get_runinfo_batch_xml(uids)
-            # logger.info(xml)
 
             # iterate over runs in chunk
-            for run_dict in iter_runinfo_from_xml(xml, min_bases):
+            for run_dict in iter_filtered_runinfo(xml, min_bases, self.data):
                 yield run_dict
 
 
@@ -171,48 +169,94 @@ def get_runinfo_batch_xml(uids: List[int]) -> str:
     return res.text
 
 
-def iter_runinfo_from_xml(xml: str, min_bases: int) -> Iterator[Dict[str, Any]]:
-    """Yield dicts w/ {srr, srs, organism, tax_id, bases} for each run
-    in the xml.
+def iter_runinfo_from_xml(xml: str) -> Iterator[Dict[str, Any]]:
+    """Yield dicts of {srr, srs, organism, tax_id, bases} for each run in xml.
     """
+    # iterate over RUN items in XML to extract sample data
     tree = ET.fromstring(xml)
-    for exppack in tree:
-        for exp in exppack:
-            if exp.tag == "RUN_SET":
-                for run in exp:
-                    srr_accession = run.attrib["accession"]
-                    srr_total_bases = int(run.attrib["total_bases"])
+    for run in tree.findall(".//RUN"):
 
-                    if srr_accession in EXCLUDE_TAXIDS:
-                        logger.debug("skipping {srr_accession}; already done.")
-                        continue
+        # get RUN (SRR) accession
+        srr_accession = run.attrib["accession"]
 
-                    if not srr_total_bases > min_bases:
-                        logger.debug("skipping {srr_accession}; too few bases.")
-                        continue
+        # get BASES
+        srr_total_bases = int(run.attrib["total_bases"])
 
-                    for pool in run:
-                        if pool.tag == "Pool":
-                            for member in pool:
-                                srs_accession = member.attrib["accession"]
-                                organism = member.attrib["organism"]
-                                tax_id = int(member.attrib["tax_id"])
+        # iterate over SAMPLES (SRS) in this RUN
+        for pool in run.findall(".//Pool"):
 
-                                yield {
-                                    "SRR": srr_accession,
-                                    "SRS": srs_accession,
-                                    "organism": organism,
-                                    "tax_id": tax_id,
-                                    "bases": srr_total_bases,
-                                }
+            samn_accession = pool.find('.//EXTERNAL_ID').text
+            for member in pool:
+
+                # Sample data
+                srs_accession = member.attrib["accession"]
+                organism = member.attrib["organism"]
+                tax_id = int(member.attrib["tax_id"])
+
+                # runinfo dict
+                yield {
+                    "SRR": srr_accession,
+                    "SRS": srs_accession,
+                    "SAMN": samn_accession,
+                    "organism": organism,
+                    "tax_id": tax_id,
+                    "bases": srr_total_bases,
+                }
+
+
+def iter_filtered_runinfo(
+    xml: str,
+    min_bases: int,
+    data: pd.DataFrame,
+) -> Iterator[Dict[str, Any]]:
+    """Return runinfo dicts passing filters
+
+    (1): Sufficient number of bases (min_bases)
+    (2): Not already in database (data, filter)
+
+    For example, only return if tax_id, SRR, SRS, or SAMN is not already
+    in database.
+    """
+    for rdict in iter_runinfo_from_xml(xml):
+
+        if rdict["bases"] < min_bases:
+            logger.info(f"skipping {rdict['SRR']}; too few bases")
+            continue
+
+        if rdict["SRR"] in data.SRR:
+            logger.info(f"skipping {rdict['SRR']}; already in database")
+            continue
+
+        if rdict["SRS"] in data.SRS:
+            logger.info(f"skipping {rdict['SRA']}; SRS ID ({rdict['SRS']}) already in database")
+            continue
+
+        if rdict["SAMN"] in data.SAMN:
+            logger.info(f"skipping {rdict['SRR']}; SAMN ID ({rdict['SAMN']}) already in database")
+            continue
+
+        if rdict["tax_id"] in data.tax_id:
+            logger.info(f"skipping {rdict['SRR']}; TAX ID ({rdict['tax_id']}) already in database")
+            continue
+
+        # enter to dataframe and yield as dict
+        data.loc[rdict["SRS"]] = [rdict.get(i) for i in data.columns]
+        yield rdict
 
 
 if __name__ == "__main__":
 
-    e = EntrezFetch()
+    import kmunity
+    kmunity.set_log_level("DEBUG")
+
+    e = EntrezFetch("birds")
+
     # get a specific Run
-    e.get_runinfo("SRR7811753")
+    # r = e.get_runinfo("SRR7811753")
+    # print(r)
+
     # get ordered matches in a database
-    birds = e.iter_runinfo("birds")
-    for i in range(10):
+    birds = e.iter_runinfo(min_bases=2e9)
+    for i in range(20):
         print(next(birds))
+    print(e.data)
