@@ -2,6 +2,8 @@
 
 """Call `fastq-dump {SRR} -O {tmpdir}` to download data.
 
+If sratools 3.0.5 is not in user's PATH then compiled binaries
+are downloaded into the tmpdir and used.
 """
 
 from typing import Optional
